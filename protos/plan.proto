@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package plan;
+
+message Plan {
+    string synopsis = 1;
+    string description = 2;
+
+    google.protobuf.Timestamp creation_time = 3;
+}
