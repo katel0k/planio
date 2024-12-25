@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package join;
+
+option go_package = "join/";
+
+message JoinRequest {
+    
+}
+
+message JoinResponse {
+    string tag = 1;
+}
