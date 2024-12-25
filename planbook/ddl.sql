@@ -1,0 +1,17 @@
+START TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+
+CREATE TABLE plans (
+    id SERIAL PRIMARY KEY,
+    synopsis VARCHAR(128) NOT NULL,
+    creation_dttm TIMESTAMP DEFAULT NOW()::TIMESTAMP
+);
+
+CREATE TABLE descriptions (
+    plan_id INTEGER PRIMARY KEY,
+    body VARCHAR(1024)
+);
+
+ALTER TABLE descriptions ADD CONSTRAINT FK_description_for_plan FOREIGN KEY
+    (plan_id) REFERENCES plans(id);
+
+COMMIT;
