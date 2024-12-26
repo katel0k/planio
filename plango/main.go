@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -9,10 +10,12 @@ import (
 	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/katel0k/planio/lib"
+
 	msg_pb "github.com/katel0k/planio/build/msg"
 )
 
-var dbpool *pgxpool.Pool
+var db lib.Database
 
 func connectDB() *pgxpool.Pool {
 	url := "postgres://postgres:postgres@localhost:32770/planbook"
@@ -32,27 +35,27 @@ func connectDB() *pgxpool.Pool {
 type activeUser struct {
 	msgQueue chan *msg_pb.MsgResponse
 	w        *http.ResponseWriter
+	id       int
 }
 
 func joinHandler(w http.ResponseWriter, r *http.Request) {
-	row := dbpool.QueryRow(context.Background(), "INSERT INTO users(nickname) VALUES ($1) RETURNING id", r.PathValue("nickname"))
-	var id int
-	err := row.Scan(&id)
+	id, err := db.CreateNewUser(r.PathValue("nickname"))
 	if err != nil {
 		log.Default().Print(err)
 		log.Default().Printf("Failed to add user in database")
 	} else {
-		// response := join_pb.JoinResponse{Id: int32(id)}
 		activeUsersMutex.Lock()
 		activeUsers[id] = activeUser{
 			msgQueue: make(chan *msg_pb.MsgResponse),
 			w:        &w,
+			id:       id,
 		}
 		activeUsersMutex.Unlock()
 		log.Default().Printf("Got join request for %d", id)
 		msg := <-activeUsers[id].msgQueue
 		(*activeUsers[id].w).Write([]byte(msg.String()))
 		log.Default().Printf("got response %s", msg.String())
+		delete(activeUsers, id)
 	}
 }
 
@@ -78,8 +81,7 @@ func (h conversationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Default().Print("error ", err)
 		return
 	} else {
-		dbpool.Exec(context.Background(),
-			"INSERT INTO messages(author_id, receiver_id, body) VALUES ($1, $2, $3)", "1", receiver, text)
+		db.CreateNewMessage(1, receiver, text)
 		msg := msg_pb.MsgResponse{
 			Text:     text,
 			AuthorId: int32(receiver),
@@ -92,10 +94,21 @@ func (h conversationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func listUsers(w http.ResponseWriter, _ *http.Request) {
+	activeUsersMutex.RLock()
+	for user := range activeUsers {
+		w.Write([]byte(fmt.Sprint(user)))
+	}
+	activeUsersMutex.RUnlock()
+}
+
 func main() {
-	dbpool = connectDB()
-	defer dbpool.Close()
+	db = lib.Database{
+		Pool: connectDB(),
+	}
+	defer db.Pool.Close()
 	s := &http.Server{Addr: ":5000"}
+	http.HandleFunc("/users", listUsers)
 	http.HandleFunc("/join/{nickname}", joinHandler)
 	http.Handle("/message/{receiver_id}", conversationHandler{})
 	log.Fatal(s.ListenAndServe())
