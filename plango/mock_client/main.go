@@ -5,42 +5,44 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
+	"net/http/cookiejar"
+	"net/url"
 	"time"
 
 	msg_pb "github.com/katel0k/planio/mock_client/build/msg"
 	"google.golang.org/protobuf/proto"
 )
 
-var SERVER_URL string = "http://0.0.0.0:5000"
 var PONG_TIMEOUT time.Duration = time.Second * 5
 
 func main() {
-	s := http.Client{
+	SERVER_URL, _ := url.Parse("http://0.0.0.0:5000")
+	joinURL := SERVER_URL.JoinPath("/join/mock")
+	pingURL := SERVER_URL.JoinPath("/ping")
+
+	jar, _ := cookiejar.New(nil)
+	c := http.Client{
 		Timeout: PONG_TIMEOUT,
+		Jar:     jar,
 	}
-	defer s.CloseIdleConnections()
-	resp, err := s.Get(SERVER_URL + "/join/mock")
+	defer c.CloseIdleConnections()
+	resp, err := c.Get(joinURL.String())
 	if err != nil {
 		log.Println(err)
 		log.Println("Server error, quitting")
 		return
 	}
+	c.Jar.SetCookies(joinURL, resp.Cookies())
 	buffer := make([]byte, 1024)
 	n, err := resp.Body.Read(buffer)
 	if err != io.EOF && n != 0 {
 		log.Println(err)
 		log.Println("Server error, quitting")
 	}
-	id, err := strconv.Atoi(string(buffer[0:n]))
-	if err != nil {
-		log.Println(err)
-		log.Println("Server error, quitting")
-		return
-	}
 
 	for {
-		pong, err := s.Get(fmt.Sprintf("%s/ping/%d", SERVER_URL, id))
+		pong, err := c.Get(pingURL.String())
+
 		if err != nil {
 			log.Println(err)
 			log.Println("Server error, quitting")

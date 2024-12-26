@@ -19,25 +19,6 @@ import (
 
 var db lib.Database
 
-type activeUser struct {
-	msgQueue chan *msg_pb.MsgResponse
-}
-
-var activeUsers map[int]activeUser = make(map[int]activeUser)
-var activeUsersMutex sync.RWMutex
-
-type messageHandler struct {
-}
-
-type Signal int
-
-const (
-	Stop Signal = iota
-)
-
-type pingHandler struct {
-}
-
 func connectDB() *pgxpool.Pool {
 	url := "postgres://postgres:postgres@localhost:32770/planbook"
 	config, err := pgxpool.ParseConfig(url)
@@ -53,23 +34,30 @@ func connectDB() *pgxpool.Pool {
 	return dbpool
 }
 
+var userMessageChannels map[int]chan *msg_pb.MsgResponse = make(map[int]chan *msg_pb.MsgResponse)
+var userChannelsMutex sync.RWMutex
+
 func joinHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := db.CreateNewUser(r.PathValue("nickname"))
 	if err != nil {
 		log.Default().Print(err)
 		log.Default().Printf("Failed to add user in database")
 	} else {
-		activeUsersMutex.Lock()
-		activeUsers[id] = activeUser{
-			msgQueue: make(chan *msg_pb.MsgResponse),
-		}
-		activeUsersMutex.Unlock()
+		userChannelsMutex.Lock()
+		userMessageChannels[id] = make(chan *msg_pb.MsgResponse)
+		userChannelsMutex.Unlock()
 		log.Default().Printf("Got join request for %d", id)
+		cookie := http.Cookie{
+			Name:   "id",
+			Value:  strconv.Itoa(id),
+			MaxAge: 300,
+		}
+		http.SetCookie(w, &cookie)
 		w.Write([]byte(fmt.Sprintf("%d", id)))
 	}
 }
 
-func (h messageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func messageHandler(w http.ResponseWriter, r *http.Request) {
 	var receiver, err = strconv.Atoi(r.PathValue("receiver_id"))
 	if err != nil {
 		return
@@ -86,30 +74,27 @@ func (h messageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Text:     text,
 			AuthorId: int32(receiver),
 		}
-		activeUsersMutex.RLock()
-		if user, isOnline := activeUsers[receiver]; isOnline {
+		userChannelsMutex.RLock()
+		if user, isOnline := userMessageChannels[receiver]; isOnline {
 			go (func() {
-				user.msgQueue <- &msg
+				user <- &msg
 			})()
 			log.Default().Printf("Sent message %s", text)
 		}
-		activeUsersMutex.RUnlock()
+		userChannelsMutex.RUnlock()
 	}
 }
 
-func listUsers(w http.ResponseWriter, _ *http.Request) {
-	activeUsersMutex.RLock()
-	for user := range activeUsers {
-		w.Write([]byte(fmt.Sprint(user)))
-	}
-	activeUsersMutex.RUnlock()
-}
-
-func (p pingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func pingHandler(w http.ResponseWriter, r *http.Request) {
 	log.Default().Printf("GET %s", r.URL)
-	id, _ := strconv.Atoi(r.PathValue("id"))
+
+	idStr, err := r.Cookie("id")
+	if err == http.ErrNoCookie {
+		return
+	}
+	id, _ := strconv.Atoi(idStr.Value)
 	select {
-	case msg := <-activeUsers[id].msgQueue:
+	case msg := <-userMessageChannels[id]:
 		marsh, _ := proto.Marshal(msg)
 		w.Write(marsh)
 		log.Default().Printf("Pong message %s", msg.String())
@@ -119,16 +104,25 @@ func (p pingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func listUsers(w http.ResponseWriter, _ *http.Request) {
+	userChannelsMutex.RLock()
+	for user := range userMessageChannels {
+		w.Write([]byte(fmt.Sprint(user)))
+	}
+	userChannelsMutex.RUnlock()
+}
+
 func main() {
 	db = lib.Database{
 		Pool: connectDB(),
 	}
 	defer db.Pool.Close()
 	s := &http.Server{Addr: ":5000"}
-	http.HandleFunc("/users", listUsers)
 	http.HandleFunc("/join/{nickname}", joinHandler)
-	http.Handle("/message/{receiver_id}", messageHandler{})
-	http.Handle("/ping/{id}", pingHandler{})
+	http.HandleFunc("/ping", pingHandler)
+	http.HandleFunc("/message/{receiver_id}", messageHandler)
+
+	http.HandleFunc("/users", listUsers)
 	log.Fatal(s.ListenAndServe())
 }
 
