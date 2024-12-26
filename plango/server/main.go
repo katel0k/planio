@@ -113,3 +113,12 @@ func main() {
 	http.Handle("/message/{receiver_id}", conversationHandler{})
 	log.Fatal(s.ListenAndServe())
 }
+
+// plan:
+// i want to write tests because using 3 fucking terminals is god awful for testing
+// for me to write tests i need to further decompose the code into testeable modules
+// furthermore, i woould need to write functional tests for that purpose
+// problem is that i want to write rust client, but i really dont want to deal with that right now
+// as that is not the point of this specific project currently
+// so i would rather write it in go, but that would go against the spirit of this application.
+// soultion is that i'll write mock client for testing in go and a real client later down the line in rust.
