@@ -19,6 +19,25 @@ import (
 
 var db lib.Database
 
+type activeUser struct {
+	msgQueue chan *msg_pb.MsgResponse
+}
+
+var activeUsers map[int]activeUser = make(map[int]activeUser)
+var activeUsersMutex sync.RWMutex
+
+type messageHandler struct {
+}
+
+type Signal int
+
+const (
+	Stop Signal = iota
+)
+
+type pingHandler struct {
+}
+
 func connectDB() *pgxpool.Pool {
 	url := "postgres://postgres:postgres@localhost:32770/planbook"
 	config, err := pgxpool.ParseConfig(url)
@@ -34,11 +53,6 @@ func connectDB() *pgxpool.Pool {
 	return dbpool
 }
 
-type activeUser struct {
-	msgQueue chan *msg_pb.MsgResponse
-	id       int
-}
-
 func joinHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := db.CreateNewUser(r.PathValue("nickname"))
 	if err != nil {
@@ -48,7 +62,6 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 		activeUsersMutex.Lock()
 		activeUsers[id] = activeUser{
 			msgQueue: make(chan *msg_pb.MsgResponse),
-			id:       id,
 		}
 		activeUsersMutex.Unlock()
 		log.Default().Printf("Got join request for %d", id)
@@ -56,17 +69,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var activeUsers map[int]activeUser = make(map[int]activeUser)
-var activeUsersMutex sync.RWMutex
-
-type conversationHandler struct {
-}
-
-func sendMsg(to activeUser, msg *msg_pb.MsgResponse) {
-	to.msgQueue <- msg
-}
-
-func (h conversationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h messageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var receiver, err = strconv.Atoi(r.PathValue("receiver_id"))
 	if err != nil {
 		return
@@ -85,9 +88,12 @@ func (h conversationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		activeUsersMutex.RLock()
 		if user, isOnline := activeUsers[receiver]; isOnline {
-			go sendMsg(user, &msg)
+			go (func() {
+				user.msgQueue <- &msg
+			})()
+			log.Default().Printf("Sent message %s", text)
 		}
-		log.Default().Printf("Sent message %s", text)
+		activeUsersMutex.RUnlock()
 	}
 }
 
@@ -99,39 +105,17 @@ func listUsers(w http.ResponseWriter, _ *http.Request) {
 	activeUsersMutex.RUnlock()
 }
 
-type Signal int
-
-const (
-	Stop Signal = iota
-)
-
-type pingHandler struct {
-	control chan Signal
-}
-
 func (p pingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Default().Printf("GET %s", r.URL)
 	id, _ := strconv.Atoi(r.PathValue("id"))
-	timer := time.AfterFunc(time.Second*4, func() {
-		w.Write([]byte("pong"))
-		if flusher, ok := w.(http.Flusher); ok {
-			flusher.Flush()
-		}
-		p.control <- Stop
-	})
 	select {
 	case msg := <-activeUsers[id].msgQueue:
 		marsh, _ := proto.Marshal(msg)
 		w.Write(marsh)
-		log.Default().Printf("got response %s", msg.String())
-		if flusher, ok := w.(http.Flusher); ok {
-			flusher.Flush()
-		}
-		timer.Stop()
-	case sig := <-p.control:
-		if sig == Stop {
-			return
-		}
+		log.Default().Printf("Pong message %s", msg.String())
+	case <-time.After(time.Second * 4):
+		w.Write([]byte("pong"))
+		log.Default().Print("pong")
 	}
 }
 
@@ -143,7 +127,7 @@ func main() {
 	s := &http.Server{Addr: ":5000"}
 	http.HandleFunc("/users", listUsers)
 	http.HandleFunc("/join/{nickname}", joinHandler)
-	http.Handle("/message/{receiver_id}", conversationHandler{})
+	http.Handle("/message/{receiver_id}", messageHandler{})
 	http.Handle("/ping/{id}", pingHandler{})
 	log.Fatal(s.ListenAndServe())
 }

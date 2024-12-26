@@ -12,12 +12,15 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+var SERVER_URL string = "http://0.0.0.0:5000"
+var PONG_TIMEOUT time.Duration = time.Second * 5
+
 func main() {
 	s := http.Client{
-		Timeout: time.Second * 5, // hanoseconds -> seconds
+		Timeout: PONG_TIMEOUT,
 	}
 	defer s.CloseIdleConnections()
-	resp, err := s.Get("http://0.0.0.0:5000/join/mock")
+	resp, err := s.Get(SERVER_URL + "/join/mock")
 	if err != nil {
 		log.Println(err)
 		log.Println("Server error, quitting")
@@ -27,7 +30,7 @@ func main() {
 	n, err := resp.Body.Read(buffer)
 	if err != io.EOF && n != 0 {
 		log.Println(err)
-		log.Panicln("Server error, quitting")
+		log.Println("Server error, quitting")
 	}
 	id, err := strconv.Atoi(string(buffer[0:n]))
 	if err != nil {
@@ -37,27 +40,31 @@ func main() {
 	}
 
 	for {
-		pong, err := s.Get(fmt.Sprintf("http://0.0.0.0:5000/ping/%d", id))
+		pong, err := s.Get(fmt.Sprintf("%s/ping/%d", SERVER_URL, id))
 		if err != nil {
 			log.Println(err)
 			log.Println("Server error, quitting")
 			return
 		}
-		n, _ = pong.Body.Read(buffer)
-		if n != 0 {
-			msg := msg_pb.MsgResponse{}
-			proto.Unmarshal(buffer[0:n], &msg)
-			text := msg.Text
-			// text := msg_pb.MsgResponse
-			if text != "pong" {
-				log.Printf("Got message: \n%s\n", text)
-			} else {
-				log.Println("pong")
+		var waiter chan []byte = make(chan []byte)
+		go (func() {
+			defer pong.Body.Close()
+			n, _ = pong.Body.Read(buffer)
+			if n != 0 {
+				fmt.Println(n)
+				waiter <- buffer[0:n]
 			}
+		})()
+		buf := <-waiter
+		msg := msg_pb.MsgResponse{}
+		err = proto.Unmarshal(buf, &msg)
+		if err == nil {
+			text := msg.Text
+			if text != "pong" {
+				log.Printf("Got message: %s", text)
+			}
+		} else {
+			log.Println("pong")
 		}
 	}
-	// join and get id
-	// send ping request to server
-	// wait for pong with data
-	// timeout if it didnt reach client
 }
