@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/katel0k/planio/lib"
+	"github.com/katel0k/planio/server/lib"
+	"google.golang.org/protobuf/proto"
 
-	msg_pb "github.com/katel0k/planio/build/msg"
+	msg_pb "github.com/katel0k/planio/server/build/msg"
 )
 
 var db lib.Database
@@ -34,7 +36,6 @@ func connectDB() *pgxpool.Pool {
 
 type activeUser struct {
 	msgQueue chan *msg_pb.MsgResponse
-	w        *http.ResponseWriter
 	id       int
 }
 
@@ -47,15 +48,11 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 		activeUsersMutex.Lock()
 		activeUsers[id] = activeUser{
 			msgQueue: make(chan *msg_pb.MsgResponse),
-			w:        &w,
 			id:       id,
 		}
 		activeUsersMutex.Unlock()
 		log.Default().Printf("Got join request for %d", id)
-		msg := <-activeUsers[id].msgQueue
-		(*activeUsers[id].w).Write([]byte(msg.String()))
-		log.Default().Printf("got response %s", msg.String())
-		delete(activeUsers, id)
+		w.Write([]byte(fmt.Sprintf("%d", id)))
 	}
 }
 
@@ -75,8 +72,8 @@ func (h conversationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var bytes []byte = make([]byte, 1024)
-	_, err = r.Body.Read(bytes)
-	text := string(bytes)
+	n, err := r.Body.Read(bytes)
+	text := string(bytes[0:n])
 	if err != nil && err != io.EOF {
 		log.Default().Print("error ", err)
 		return
@@ -102,6 +99,42 @@ func listUsers(w http.ResponseWriter, _ *http.Request) {
 	activeUsersMutex.RUnlock()
 }
 
+type Signal int
+
+const (
+	Stop Signal = iota
+)
+
+type pingHandler struct {
+	control chan Signal
+}
+
+func (p pingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Default().Printf("GET %s", r.URL)
+	id, _ := strconv.Atoi(r.PathValue("id"))
+	timer := time.AfterFunc(time.Second*4, func() {
+		w.Write([]byte("pong"))
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+		p.control <- Stop
+	})
+	select {
+	case msg := <-activeUsers[id].msgQueue:
+		marsh, _ := proto.Marshal(msg)
+		w.Write(marsh)
+		log.Default().Printf("got response %s", msg.String())
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+		timer.Stop()
+	case sig := <-p.control:
+		if sig == Stop {
+			return
+		}
+	}
+}
+
 func main() {
 	db = lib.Database{
 		Pool: connectDB(),
@@ -111,6 +144,7 @@ func main() {
 	http.HandleFunc("/users", listUsers)
 	http.HandleFunc("/join/{nickname}", joinHandler)
 	http.Handle("/message/{receiver_id}", conversationHandler{})
+	http.Handle("/ping/{id}", pingHandler{})
 	log.Fatal(s.ListenAndServe())
 }
 

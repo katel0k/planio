@@ -1,4 +1,4 @@
-module github.com/katel0k/planio
+module github.com/katel0k/planio/server
 
 go 1.23.4
 
