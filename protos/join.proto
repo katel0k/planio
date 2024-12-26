@@ -9,5 +9,5 @@ message JoinRequest {
 }
 
 message JoinResponse {
-    string tag = 1;
+    int32 id = 1;
 }

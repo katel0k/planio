@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package msg;
+
+option go_package = "msg/";
+
+message MsgRequest {
+    string text = 1;
+    int32 receiver_id = 2;
+}
+
+message MsgResponse {
+    string text = 1;
+    int32 author_id = 2;
+}
