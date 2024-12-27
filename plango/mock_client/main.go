@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -58,7 +60,7 @@ func main() {
 	SERVER_URL, _ := url.Parse("http://0.0.0.0:5000")
 	joinURL := SERVER_URL.JoinPath("/join/mock")
 	pingURL := SERVER_URL.JoinPath("/ping")
-	msgURL := SERVER_URL.JoinPath("/message/")
+	msgURL := SERVER_URL.JoinPath("/message")
 	allUsersURL := SERVER_URL.JoinPath("/users")
 
 	jar, _ := cookiejar.New(nil)
@@ -100,6 +102,13 @@ func main() {
 		fmt.Println("Write message:")
 		var msg string
 		fmt.Scanln(&msg)
-		c.Post(msgURL.JoinPath(id).String(), "text/plain", strings.NewReader(msg))
+		iid, _ := strconv.Atoi(id)
+		m := msg_pb.MsgRequest{
+			Text:       msg,
+			ReceiverId: int32(iid),
+		}
+		res, _ := proto.Marshal(&m)
+
+		c.Post(msgURL.String(), "text/plain", bytes.NewReader(res))
 	}
 }

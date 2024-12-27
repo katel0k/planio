@@ -41,13 +41,15 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
-	var receiver, err = strconv.Atoi(r.PathValue("receiver_id"))
-	if err != nil {
-		return
-	}
 	var bytes []byte = make([]byte, 1024)
 	n, err := r.Body.Read(bytes)
-	text := string(bytes[0:n])
+	msg := msg_pb.MsgRequest{}
+	err2 := proto.Unmarshal(bytes[0:n], &msg)
+	if err2 != nil {
+		log.Print(err2)
+		return
+	}
+	receiver := int(msg.ReceiverId)
 	if err != nil && err != io.EOF {
 		log.Default().Print("error ", err)
 		return
@@ -57,13 +59,13 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		id, _ := strconv.Atoi(idStr.Value)
-		msgId, err := db.CreateNewMessage(id, receiver, text)
+		msgId, err := db.CreateNewMessage(id, receiver, msg.Text)
 		if err != nil {
 			return
 		}
 		msg := msg_pb.MsgResponse{
 			Id:       int32(msgId),
-			Text:     text,
+			Text:     msg.Text,
 			AuthorId: int32(receiver),
 		}
 		userChannelsMutex.RLock()
@@ -71,7 +73,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 			go (func() {
 				user <- &msg
 			})()
-			log.Default().Printf("Sent message %s", text)
+			log.Default().Printf("Sent message %s", msg.Text)
 		}
 		userChannelsMutex.RUnlock()
 	}
@@ -112,7 +114,7 @@ func main() {
 	s := &http.Server{Addr: ":5000"}
 	http.HandleFunc("/join/{nickname}", joinHandler)
 	http.HandleFunc("/ping", pingHandler)
-	http.HandleFunc("/message/{receiver_id}", messageHandler)
+	http.HandleFunc("/message", messageHandler)
 
 	http.HandleFunc("/users", listUsers)
 	log.Fatal(s.ListenAndServe())
