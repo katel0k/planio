@@ -24,6 +24,7 @@ ALTER TABLE descriptions ADD CONSTRAINT FK_description_for_plan FOREIGN KEY
     (plan_id) REFERENCES plans(id);
 
 CREATE TABLE messages (
+    id SERIAL PRIMARY KEY,
     author_id INTEGER,
     receiver_id INTEGER,
     sent_dttm TIMESTAMP DEFAULT NOW()::TIMESTAMP,

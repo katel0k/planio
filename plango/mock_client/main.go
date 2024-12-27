@@ -63,7 +63,7 @@ func main() {
 		msg := msg_pb.MsgResponse{}
 		err = proto.Unmarshal(buf, &msg)
 		if err == nil {
-			log.Printf("%d sent: %s", msg.AuthorId, msg.Text)
+			log.Printf("%d received msg %d: %s", msg.AuthorId, msg.Id, msg.Text)
 		} else if string(buf) == "pong" {
 			if *printPingInfo {
 				log.Printf("pong")

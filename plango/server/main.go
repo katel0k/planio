@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log"
@@ -10,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/katel0k/planio/server/lib"
 	"google.golang.org/protobuf/proto"
 
@@ -18,21 +16,6 @@ import (
 )
 
 var db lib.Database
-
-func connectDB() *pgxpool.Pool {
-	url := "postgres://postgres:postgres@localhost:32770/planbook"
-	config, err := pgxpool.ParseConfig(url)
-	if err != nil {
-		log.Fatalf("Unable to parse DB config: %v\n", err)
-	}
-
-	dbpool, err := pgxpool.NewWithConfig(context.Background(), config)
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
-	}
-
-	return dbpool
-}
 
 var userMessageChannels map[int]chan *msg_pb.MsgResponse = make(map[int]chan *msg_pb.MsgResponse)
 var userChannelsMutex sync.RWMutex
@@ -69,8 +52,17 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		log.Default().Print("error ", err)
 		return
 	} else {
-		db.CreateNewMessage(1, receiver, text)
+		idStr, err := r.Cookie("id")
+		if err == http.ErrNoCookie {
+			return
+		}
+		id, _ := strconv.Atoi(idStr.Value)
+		msgId, err := db.CreateNewMessage(id, receiver, text)
+		if err != nil {
+			return
+		}
 		msg := msg_pb.MsgResponse{
+			Id:       int32(msgId),
 			Text:     text,
 			AuthorId: int32(receiver),
 		}
@@ -114,7 +106,7 @@ func listUsers(w http.ResponseWriter, _ *http.Request) {
 
 func main() {
 	db = lib.Database{
-		Pool: connectDB(),
+		Pool: lib.ConnectDB(),
 	}
 	defer db.Pool.Close()
 	s := &http.Server{Addr: ":5000"}
