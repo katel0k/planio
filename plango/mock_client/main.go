@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"io"
 	"log"
 	"net/http"
@@ -16,6 +16,9 @@ import (
 var PONG_TIMEOUT time.Duration = time.Second * 5
 
 func main() {
+	printPingInfo := flag.Bool("d", false, "Log ping pong debug info")
+	flag.Parse()
+
 	SERVER_URL, _ := url.Parse("http://0.0.0.0:5000")
 	joinURL := SERVER_URL.JoinPath("/join/mock")
 	pingURL := SERVER_URL.JoinPath("/ping")
@@ -53,7 +56,6 @@ func main() {
 			defer pong.Body.Close()
 			n, _ = pong.Body.Read(buffer)
 			if n != 0 {
-				fmt.Println(n)
 				waiter <- buffer[0:n]
 			}
 		})()
@@ -61,12 +63,13 @@ func main() {
 		msg := msg_pb.MsgResponse{}
 		err = proto.Unmarshal(buf, &msg)
 		if err == nil {
-			text := msg.Text
-			if text != "pong" {
-				log.Printf("Got message: %s", text)
+			log.Printf("%d sent: %s", msg.AuthorId, msg.Text)
+		} else if string(buf) == "pong" {
+			if *printPingInfo {
+				log.Printf("pong")
 			}
 		} else {
-			log.Println("pong")
+			log.Print(err)
 		}
 	}
 }
