@@ -99,7 +99,7 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 func listUsers(w http.ResponseWriter, _ *http.Request) {
 	userChannelsMutex.RLock()
 	for user := range userMessageChannels {
-		w.Write([]byte(fmt.Sprint(user)))
+		w.Write([]byte(fmt.Sprint(user) + " "))
 	}
 	userChannelsMutex.RUnlock()
 }
