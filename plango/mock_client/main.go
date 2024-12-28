@@ -23,7 +23,16 @@ import (
 
 var PONG_TIMEOUT time.Duration = time.Second * 5
 
+type command int
+
+const (
+	SERVER_ERROR command = iota
+)
+
+var shutdownChannel chan command
+
 func pingPong(c *http.Client, pingURL *url.URL, printPingInfo bool) {
+	defer func() { shutdownChannel <- SERVER_ERROR }()
 	buffer := make([]byte, 1024)
 	for {
 		pong, err := c.Get(pingURL.String())
@@ -90,59 +99,67 @@ func main() {
 
 	go pingPong(&c, pingURL, *printPingInfo)
 	for {
-		fmt.Println("Choose next action: /m - message, /p - plans, /n - new plan")
-		var cmd rune
-		fmt.Scanf("/%c\n", &cmd)
-		switch cmd {
-		case 'm':
-			resp, _ := c.Get(allUsersURL.String())
-			n, _ := resp.Body.Read(buffer)
-			fmt.Println("Active users you can write to:")
-			allUsers := strings.Split(string(buffer[0:n]), " ")
-			fmt.Println(string(buffer[0:n]))
-			fmt.Println("Which user do you want to write to:")
-			var id string
-			for {
-				var possibleId int
-				fmt.Scanf("%d\n", &possibleId)
-				id = strconv.Itoa(possibleId)
-				if slices.Contains(allUsers, id) {
-					break
-				}
-				fmt.Printf("User not found, try again:\n")
+		select {
+		case cmd := <-shutdownChannel:
+			if cmd == SERVER_ERROR {
+				return
 			}
-			fmt.Println("Write message:")
-			var msg string
-			fmt.Scanln(&msg)
-			iid, _ := strconv.Atoi(id)
-			m := msg_pb.MsgRequest{
-				Text:       msg,
-				ReceiverId: int32(iid),
-			}
-			res, _ := proto.Marshal(&m)
-
-			c.Post(msgURL.String(), "text/plain", bytes.NewReader(res))
-		case 'p':
-			resp, _ := c.Get(allPlansURL.String())
-			n, _ := resp.Body.Read(buffer)
-			var agenda plan_pb.Agenda
-			proto.Unmarshal(buffer[0:n], &agenda)
-			for plan := range agenda.Plans {
-				fmt.Println(agenda.Plans[plan].String())
-			}
-			fmt.Println()
-		case 'n':
-			fmt.Println("Write synopsis of your plan:")
-			synopsis, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-			plan := plan_pb.Plan{
-				Synopsis: synopsis,
-			}
-			marsh, _ := proto.Marshal(&plan)
-			resp, _ := c.Post(newPlanURL.String(), "text/plain", bytes.NewReader(marsh))
-			n, _ := resp.Body.Read(buffer)
-			fmt.Printf("Created plan: %s\n", string(buffer[0:n]))
 		default:
-			fmt.Printf("Unrecognised command: %c\n", cmd)
+
+			fmt.Println("Choose next action: /m - message, /p - plans, /n - new plan")
+			var cmd rune
+			fmt.Scanf("/%c\n", &cmd)
+			switch cmd {
+			case 'm':
+				resp, _ := c.Get(allUsersURL.String())
+				n, _ := resp.Body.Read(buffer)
+				fmt.Println("Active users you can write to:")
+				allUsers := strings.Split(string(buffer[0:n]), " ")
+				fmt.Println(string(buffer[0:n]))
+				fmt.Println("Which user do you want to write to:")
+				var id string
+				for {
+					var possibleId int
+					fmt.Scanf("%d\n", &possibleId)
+					id = strconv.Itoa(possibleId)
+					if slices.Contains(allUsers, id) {
+						break
+					}
+					fmt.Printf("User not found, try again:\n")
+				}
+				fmt.Println("Write message:")
+				var msg string
+				fmt.Scanln(&msg)
+				iid, _ := strconv.Atoi(id)
+				m := msg_pb.MsgRequest{
+					Text:       msg,
+					ReceiverId: int32(iid),
+				}
+				res, _ := proto.Marshal(&m)
+
+				c.Post(msgURL.String(), "text/plain", bytes.NewReader(res))
+			case 'p':
+				resp, _ := c.Get(allPlansURL.String())
+				n, _ := resp.Body.Read(buffer)
+				var agenda plan_pb.Agenda
+				proto.Unmarshal(buffer[0:n], &agenda)
+				for plan := range agenda.Plans {
+					fmt.Println(agenda.Plans[plan].String())
+				}
+				fmt.Println()
+			case 'n':
+				fmt.Println("Write synopsis of your plan:")
+				synopsis, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+				plan := plan_pb.Plan{
+					Synopsis: synopsis,
+				}
+				marsh, _ := proto.Marshal(&plan)
+				resp, _ := c.Post(newPlanURL.String(), "text/plain", bytes.NewReader(marsh))
+				n, _ := resp.Body.Read(buffer)
+				fmt.Printf("Created plan: %s\n", string(buffer[0:n]))
+			default:
+				fmt.Printf("Unrecognised command: %c\n", cmd)
+			}
 		}
 	}
 }
