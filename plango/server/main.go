@@ -13,7 +13,16 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	msg_pb "github.com/katel0k/planio/server/build/msg"
+	plan_pb "github.com/katel0k/planio/server/build/plan"
 )
+
+func getIdFromCookie(r *http.Request) (int, error) {
+	idStr, err := r.Cookie("id")
+	if err == http.ErrNoCookie {
+		return 0, err
+	}
+	return strconv.Atoi(idStr.Value)
+}
 
 var db lib.Database
 
@@ -54,11 +63,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		log.Default().Print("error ", err)
 		return
 	} else {
-		idStr, err := r.Cookie("id")
-		if err == http.ErrNoCookie {
-			return
-		}
-		id, _ := strconv.Atoi(idStr.Value)
+		id, _ := getIdFromCookie(r)
 		msgId, err := db.CreateNewMessage(id, receiver, msg.Text)
 		if err != nil {
 			return
@@ -82,11 +87,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 func pingHandler(w http.ResponseWriter, r *http.Request) {
 	log.Default().Printf("GET %s", r.URL)
 
-	idStr, err := r.Cookie("id")
-	if err == http.ErrNoCookie {
-		return
-	}
-	id, _ := strconv.Atoi(idStr.Value)
+	id, _ := getIdFromCookie(r)
 	select {
 	case msg := <-userMessageChannels[id]:
 		marsh, _ := proto.Marshal(msg)
@@ -106,6 +107,29 @@ func listUsers(w http.ResponseWriter, _ *http.Request) {
 	userChannelsMutex.RUnlock()
 }
 
+func listPlans(w http.ResponseWriter, r *http.Request) {
+	id, _ := getIdFromCookie(r)
+	agenda, _ := db.GetAllPlans(id)
+	marsh, _ := proto.Marshal(agenda)
+	w.Write(marsh)
+}
+
+func addPlan(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		return
+	}
+	id, _ := getIdFromCookie(r)
+	buffer := make([]byte, 1024)
+	n, _ := r.Body.Read(buffer)
+	var plan plan_pb.Plan
+	err := proto.Unmarshal(buffer[0:n], &plan)
+	if err != nil {
+		return
+	}
+	plan_id, _ := db.CreateNewPlan(id, &plan)
+	w.Write([]byte(fmt.Sprintf("%d", plan_id)))
+}
+
 func main() {
 	db = lib.Database{
 		Pool: lib.ConnectDB(),
@@ -117,14 +141,8 @@ func main() {
 	http.HandleFunc("/message", messageHandler)
 
 	http.HandleFunc("/users", listUsers)
+
+	http.HandleFunc("/plans", listPlans)
+	http.HandleFunc("/plan", addPlan)
 	log.Fatal(s.ListenAndServe())
 }
-
-// plan:
-// i want to write tests because using 3 fucking terminals is god awful for testing
-// for me to write tests i need to further decompose the code into testeable modules
-// furthermore, i woould need to write functional tests for that purpose
-// problem is that i want to write rust client, but i really dont want to deal with that right now
-// as that is not the point of this specific project currently
-// so i would rather write it in go, but that would go against the spirit of this application.
-// soultion is that i'll write mock client for testing in go and a real client later down the line in rust.

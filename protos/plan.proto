@@ -2,11 +2,18 @@ syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 
+option go_package = "plan/";
+
 package plan;
 
 message Plan {
-    string synopsis = 1;
-    string description = 2;
+    int32 id = 1;
+    string synopsis = 2;
+    optional string description = 3;
 
-    google.protobuf.Timestamp creation_time = 3;
+    optional google.protobuf.Timestamp creation_time = 4;
+}
+
+message Agenda {
+    repeated Plan plans = 1;
 }

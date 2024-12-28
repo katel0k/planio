@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
@@ -9,12 +10,14 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	msg_pb "github.com/katel0k/planio/mock_client/build/msg"
+	plan_pb "github.com/katel0k/planio/mock_client/build/plan"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -62,6 +65,8 @@ func main() {
 	pingURL := SERVER_URL.JoinPath("/ping")
 	msgURL := SERVER_URL.JoinPath("/message")
 	allUsersURL := SERVER_URL.JoinPath("/users")
+	allPlansURL := SERVER_URL.JoinPath("/plans")
+	newPlanURL := SERVER_URL.JoinPath("/plan")
 
 	jar, _ := cookiejar.New(nil)
 	c := http.Client{
@@ -85,30 +90,59 @@ func main() {
 
 	go pingPong(&c, pingURL, *printPingInfo)
 	for {
-		resp, _ := c.Get(allUsersURL.String())
-		n, _ := resp.Body.Read(buffer)
-		fmt.Println("Active users you can write to:")
-		allUsers := strings.Split(string(buffer[0:n]), " ")
-		fmt.Println(string(buffer[0:n]))
-		fmt.Println("Which user do you want to write to:")
-		var id string
-		for {
-			fmt.Scanf("%s\n", &id)
-			if slices.Contains(allUsers, id) {
-				break
+		fmt.Println("Choose next action: /m - message, /p - plans, /n - new plan")
+		var cmd rune
+		fmt.Scanf("/%c\n", &cmd)
+		switch cmd {
+		case 'm':
+			resp, _ := c.Get(allUsersURL.String())
+			n, _ := resp.Body.Read(buffer)
+			fmt.Println("Active users you can write to:")
+			allUsers := strings.Split(string(buffer[0:n]), " ")
+			fmt.Println(string(buffer[0:n]))
+			fmt.Println("Which user do you want to write to:")
+			var id string
+			for {
+				var possibleId int
+				fmt.Scanf("%d\n", &possibleId)
+				id = strconv.Itoa(possibleId)
+				if slices.Contains(allUsers, id) {
+					break
+				}
+				fmt.Printf("User not found, try again:\n")
 			}
-			fmt.Printf("User not found, try again:\n")
-		}
-		fmt.Println("Write message:")
-		var msg string
-		fmt.Scanln(&msg)
-		iid, _ := strconv.Atoi(id)
-		m := msg_pb.MsgRequest{
-			Text:       msg,
-			ReceiverId: int32(iid),
-		}
-		res, _ := proto.Marshal(&m)
+			fmt.Println("Write message:")
+			var msg string
+			fmt.Scanln(&msg)
+			iid, _ := strconv.Atoi(id)
+			m := msg_pb.MsgRequest{
+				Text:       msg,
+				ReceiverId: int32(iid),
+			}
+			res, _ := proto.Marshal(&m)
 
-		c.Post(msgURL.String(), "text/plain", bytes.NewReader(res))
+			c.Post(msgURL.String(), "text/plain", bytes.NewReader(res))
+		case 'p':
+			resp, _ := c.Get(allPlansURL.String())
+			n, _ := resp.Body.Read(buffer)
+			var agenda plan_pb.Agenda
+			proto.Unmarshal(buffer[0:n], &agenda)
+			for plan := range agenda.Plans {
+				fmt.Println(agenda.Plans[plan].String())
+			}
+			fmt.Println()
+		case 'n':
+			fmt.Println("Write synopsis of your plan:")
+			synopsis, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+			plan := plan_pb.Plan{
+				Synopsis: synopsis,
+			}
+			marsh, _ := proto.Marshal(&plan)
+			resp, _ := c.Post(newPlanURL.String(), "text/plain", bytes.NewReader(marsh))
+			n, _ := resp.Body.Read(buffer)
+			fmt.Printf("Created plan: %s\n", string(buffer[0:n]))
+		default:
+			fmt.Printf("Unrecognised command: %c\n", cmd)
+		}
 	}
 }
