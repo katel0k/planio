@@ -71,7 +71,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		msg := msg_pb.MsgResponse{
 			Id:       int32(msgId),
 			Text:     msg.Text,
-			AuthorId: int32(receiver),
+			AuthorId: int32(id),
 		}
 		userChannelsMutex.RLock()
 		if user, isOnline := userMessageChannels[receiver]; isOnline {

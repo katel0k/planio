@@ -43,6 +43,7 @@ func interactWithUser(ctx context.Context, c *http.Client) {
 			switch cmd {
 			case 'm':
 				resp, _ := c.Get(allUsersURL.String())
+				defer resp.Body.Close()
 				n, _ := resp.Body.Read(buffer)
 				fmt.Println("Active users you can write to:")
 				allUsers := strings.Split(string(buffer[0:n]), " ")
@@ -71,6 +72,7 @@ func interactWithUser(ctx context.Context, c *http.Client) {
 				c.Post(msgURL.String(), "text/plain", bytes.NewReader(res))
 			case 'p':
 				resp, _ := c.Get(allPlansURL.String())
+				defer resp.Body.Close()
 				n, _ := resp.Body.Read(buffer)
 				var agenda plan_pb.Agenda
 				proto.Unmarshal(buffer[0:n], &agenda)
@@ -115,6 +117,7 @@ func main() {
 		log.Println("Server error, quitting")
 		return
 	}
+	defer resp.Body.Close()
 	c.Jar.SetCookies(joinURL, resp.Cookies())
 	buffer := make([]byte, 1024)
 	n, err := resp.Body.Read(buffer)
@@ -135,15 +138,9 @@ func main() {
 			log.Println("Server error, quitting")
 			return
 		}
-		var waiter chan []byte = make(chan []byte)
-		go (func() {
-			defer pong.Body.Close()
-			n, _ := pong.Body.Read(buffer)
-			if n != 0 {
-				waiter <- buffer[0:n]
-			}
-		})()
-		buf := <-waiter
+		defer pong.Body.Close()
+		n, _ := pong.Body.Read(buffer)
+		buf := buffer[0:n]
 		msg := msg_pb.MsgResponse{}
 		err = proto.Unmarshal(buf, &msg)
 		if err == nil {
