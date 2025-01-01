@@ -1,3 +1,6 @@
 build/
 node_modules/
 dist/
+
+# protobufjs-loader generates these files in the protos directory
+protos/*.d.ts

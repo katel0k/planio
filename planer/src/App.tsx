@@ -1,11 +1,13 @@
 import { ReactNode } from 'react'
+import joinPB from '../../protos/join.proto'
 
 interface MessageProps {
     text: string,
     author: number
 }
 
-function Message({ text, author } : MessageProps): ReactNode {
+function MessageComponent({ text, author } : MessageProps): ReactNode {
+    joinPB.join.JoinRequest.create()
     return  (
         <div className="message-wrapper">
             <div className="message">
@@ -18,6 +20,6 @@ function Message({ text, author } : MessageProps): ReactNode {
 
 export default function App() {
     return (
-        <Message text="hi" author={1} />
+        <MessageComponent text="hi" author={1} />
     )
 };

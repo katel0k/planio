@@ -5,6 +5,7 @@
         // Type Checking Configuration
         "allowUnreachableCode": false,
         "allowUnusedLabels": false,
+        "allowSyntheticDefaultImports": true,
         "exactOptionalPropertyTypes": true,
         "noFallthroughCasesInSwitch": true,
         "noImplicitThis": true,
@@ -36,7 +37,8 @@
         "isolatedModules": true
     },
     "include": [
-        "src/**/**/*"
+        "src/**/**/*",
+        "../protos/**/*"
     ],
     "exclude": [
         "node_modules"

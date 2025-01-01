@@ -4,7 +4,7 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "tscheck": "tsc",
+        "ts": "",
         "build": "webpack --config webpack.config.js --mode production",
         "start": "webpack serve --open"
     },
@@ -19,6 +19,9 @@
         "css-loader": "7.1.2",
         "file-loader": "6.2.0",
         "html-webpack-plugin": "5.6.3",
+        "protobufjs": "^7.4.0",
+        "protobufjs-loader": "^3.0.0",
+        "protoc-gen-ts": "^0.8.7",
         "react": "19.0.0",
         "react-dom": "19.0.0",
         "style-loader": "4.0.0",

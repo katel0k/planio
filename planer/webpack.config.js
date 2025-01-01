@@ -1,5 +1,6 @@
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const path = require("path");
+const protoPath = path.resolve(__dirname, '../protos/');
 
 module.exports = {
     entry: "./src/index.tsx",
@@ -14,8 +15,8 @@ module.exports = {
         }),
     ],
     resolve: {
-        modules: [__dirname, "src", "node_modules"],
-        extensions: [".*", ".js", ".jsx", ".tsx", ".ts"],
+        modules: [__dirname, "src", "node_modules", protoPath, path.join(__dirname, 'node_modules')],
+        extensions: [".*", ".js", ".jsx", ".tsx", ".ts", ".proto"],
     },
     module: {
         rules: [
@@ -33,6 +34,24 @@ module.exports = {
                 test: /\.(png|svg|jpg|gif)$/,
                 exclude: /node_modules/,
                 use: ["file-loader"]
+            },
+            {
+                test: /\.proto$/,
+                exclude: /node_modules/,
+                // include: [protoPath],
+                use: {
+                    loader: 'protobufjs-loader',
+                    options: {
+                        paths: [
+                            path.join(protoPath, 'join.proto')
+                        ],
+                        pbjsArgs: [],
+                        pbts: {
+                            args: ['--no-comments'],
+                        },
+                        target: 'static-module',
+                    },
+                },
             },
         ],
     },
