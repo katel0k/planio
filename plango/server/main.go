@@ -30,6 +30,8 @@ var userMessageChannels map[int]chan *msg_pb.MsgResponse = make(map[int]chan *ms
 var userChannelsMutex sync.RWMutex
 
 func joinHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	id, err := db.CreateNewUser(r.PathValue("nickname"))
 	if err != nil {
 		log.Default().Print(err)
@@ -108,6 +110,8 @@ func listUsers(w http.ResponseWriter, _ *http.Request) {
 }
 
 func listPlans(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	id, _ := getIdFromCookie(r)
 	agenda, _ := db.GetAllPlans(id)
 	marsh, _ := proto.Marshal(agenda)
@@ -118,6 +122,8 @@ func addPlan(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		return
 	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	id, _ := getIdFromCookie(r)
 	buffer := make([]byte, 1024)
 	n, _ := r.Body.Read(buffer)
