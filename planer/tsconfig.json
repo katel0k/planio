@@ -34,11 +34,13 @@
         "checkJs": true,
         // Interop Constraints Configuration
         "esModuleInterop": true,
-        "isolatedModules": true
+        "isolatedModules": true,
+        "paths": {
+            "*.proto": ["./src/protos/*.proto"]
+        },
     },
     "include": [
-        "src/**/**/*",
-        "../protos/**/*"
+        "src/**/*"
     ],
     "exclude": [
         "node_modules"
