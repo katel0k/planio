@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import joinPB from '../../protos/join.proto'
+import planPB from './protos/plan.proto'
 
 interface MessageProps {
     text: string,
@@ -7,7 +7,7 @@ interface MessageProps {
 }
 
 function MessageComponent({ text, author } : MessageProps): ReactNode {
-    joinPB.join.JoinRequest.create()
+    fetch("localhost:5000/").then()
     return  (
         <div className="message-wrapper">
             <div className="message">

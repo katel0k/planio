@@ -1,0 +1,3 @@
+[submodule "planer/protobufjs-loader"]
+	path = planer/protobufjs-loader
+	url = https://github.com/katel0k/protobufjs-loader.git

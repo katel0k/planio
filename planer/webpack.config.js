@@ -1,5 +1,6 @@
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const path = require("path");
+const { globSync } = require("glob");
 const protoPath = path.resolve(__dirname, '../protos/');
 
 module.exports = {
@@ -38,16 +39,14 @@ module.exports = {
             {
                 test: /\.proto$/,
                 exclude: /node_modules/,
-                // include: [protoPath],
                 use: {
                     loader: 'protobufjs-loader',
                     options: {
-                        paths: [
-                            path.join(protoPath, 'join.proto')
-                        ],
+                        paths: globSync(path.resolve(protoPath, './*.proto')),
                         pbjsArgs: [],
                         pbts: {
                             args: ['--no-comments'],
+                            outDir: path.join(__dirname, './src/protos/')
                         },
                         target: 'static-module',
                     },
