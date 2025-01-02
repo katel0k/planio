@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -119,18 +121,25 @@ func listPlans(w http.ResponseWriter, r *http.Request) {
 }
 
 func addPlan(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	if r.Method != "POST" {
 		return
 	}
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	defer r.Body.Close()
+	headerContentTtype := r.Header.Get("Content-Type")
 	id, _ := getIdFromCookie(r)
-	buffer := make([]byte, 1024)
-	n, _ := r.Body.Read(buffer)
 	var planReq plan_pb.PlanRequest
-	err := proto.Unmarshal(buffer[0:n], &planReq)
-	if err != nil {
-		return
+
+	if strings.Contains(headerContentTtype, "application/json") {
+		json.NewDecoder(r.Body).Decode(&planReq)
+	} else {
+		buffer := make([]byte, 1024)
+		n, _ := r.Body.Read(buffer)
+		err := proto.Unmarshal(buffer[0:n], &planReq)
+		if err != nil {
+			return
+		}
 	}
 	plan, _ := db.CreateNewPlan(id, &planReq)
 	marsh, _ := proto.Marshal(plan)
