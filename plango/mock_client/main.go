@@ -83,13 +83,15 @@ func interactWithUser(ctx context.Context, c *http.Client) {
 			case 'n':
 				fmt.Println("Write synopsis of your plan:")
 				synopsis, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-				plan := plan_pb.Plan{
+				plan := plan_pb.PlanRequest{
 					Synopsis: synopsis,
 				}
 				marsh, _ := proto.Marshal(&plan)
 				resp, _ := c.Post(newPlanURL.String(), "text/plain", bytes.NewReader(marsh))
 				n, _ := resp.Body.Read(buffer)
-				fmt.Printf("Created plan: %s\n", string(buffer[0:n]))
+				var res plan_pb.Plan
+				proto.Unmarshal(buffer[0:n], &res)
+				fmt.Printf("Created plan: %d\n", res.Id)
 			default:
 				fmt.Printf("Unrecognised command: %c\n", cmd)
 			}

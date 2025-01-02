@@ -127,13 +127,14 @@ func addPlan(w http.ResponseWriter, r *http.Request) {
 	id, _ := getIdFromCookie(r)
 	buffer := make([]byte, 1024)
 	n, _ := r.Body.Read(buffer)
-	var plan plan_pb.Plan
-	err := proto.Unmarshal(buffer[0:n], &plan)
+	var planReq plan_pb.PlanRequest
+	err := proto.Unmarshal(buffer[0:n], &planReq)
 	if err != nil {
 		return
 	}
-	plan_id, _ := db.CreateNewPlan(id, &plan)
-	w.Write([]byte(fmt.Sprintf("%d", plan_id)))
+	plan, _ := db.CreateNewPlan(id, &planReq)
+	marsh, _ := proto.Marshal(plan)
+	w.Write(marsh)
 }
 
 func main() {

@@ -69,15 +69,15 @@ func (db Database) GetAllPlans(user_id int) (*plan_pb.Agenda, error) {
 	return &agenda, nil
 }
 
-func (db Database) CreateNewPlan(author_id int, plan *plan_pb.Plan) (int, error) {
+func (db Database) CreateNewPlan(author_id int, plan *plan_pb.PlanRequest) (*plan_pb.Plan, error) {
 	row := db.Pool.QueryRow(context.Background(),
-		"INSERT INTO plans(author_id, synopsis) VALUES ($1, $2) RETURNING id", author_id, plan.Synopsis)
-	var id int
-	err := row.Scan(&id)
+		"INSERT INTO plans(author_id, synopsis) VALUES ($1, $2) RETURNING id, synopsis", author_id, plan.Synopsis)
+	var res plan_pb.Plan
+	err := row.Scan(&res.Id, &res.Synopsis)
 	if err != nil {
 		log.Default().Print(err)
 		log.Default().Printf("Failed to add message in database")
-		return 0, err
+		return nil, err
 	}
-	return id, nil
+	return &res, nil
 }
