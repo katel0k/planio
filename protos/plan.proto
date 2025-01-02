@@ -6,6 +6,11 @@ option go_package = "plan/";
 
 package plan;
 
+message PlanRequest {
+    string synopsis = 1;
+    optional string description = 2;
+}
+
 message Plan {
     int32 id = 1;
     string synopsis = 2;
