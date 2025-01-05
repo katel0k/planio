@@ -2,6 +2,7 @@ package lib
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -12,8 +13,8 @@ type Database struct {
 	Pool *pgxpool.Pool
 }
 
-func ConnectDB() *pgxpool.Pool {
-	url := "postgres://postgres:postgres@localhost:32771/planbook"
+func ConnectDB(port int) *pgxpool.Pool {
+	url := fmt.Sprintf("postgres://postgres:postgres@localhost:%d/planbook", port)
 	config, err := pgxpool.ParseConfig(url)
 	if err != nil {
 		log.Fatalf("Unable to parse DB config: %v\n", err)

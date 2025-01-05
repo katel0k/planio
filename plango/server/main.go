@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -18,12 +19,26 @@ import (
 	plan_pb "github.com/katel0k/planio/server/build/plan"
 )
 
+// FIXME: that is a temporary solution because I was too lazy to setup a proper server
+// If you are serving html from file://, cookies just dont work
+// So instead, I'm just gonna send an "Id" header from frontend (REALLY SAFE METHOD TRUST ME)
+// It is also good for testing, so in the future I'm probably going to hide it behind an interface
+var useCookies *bool
+
 func getIdFromCookie(r *http.Request) (int, error) {
-	idStr, err := r.Cookie("id")
-	if err == http.ErrNoCookie {
-		return 0, err
+	if *useCookies {
+		idStr, err := r.Cookie("id")
+		if err == http.ErrNoCookie {
+			return 0, err
+		}
+		return strconv.Atoi(idStr.Value)
+	} else {
+		idStr := r.Header.Get("Id")
+		if idStr == "" {
+			return 0, nil
+		}
+		return strconv.Atoi(idStr)
 	}
-	return strconv.Atoi(idStr.Value)
 }
 
 var db lib.Database
@@ -146,9 +161,14 @@ func addPlan(w http.ResponseWriter, r *http.Request) {
 	w.Write(marsh)
 }
 
+const STATIC_DIR string = "../../planer/dist"
+
 func main() {
+	port := flag.Int("p", 32768, "Database port")
+	useCookies = flag.Bool("c", false, "Use cookies or simple join id and a header")
+	flag.Parse()
 	db = lib.Database{
-		Pool: lib.ConnectDB(),
+		Pool: lib.ConnectDB(*port),
 	}
 	defer db.Pool.Close()
 	s := &http.Server{Addr: ":5000"}
@@ -160,5 +180,10 @@ func main() {
 
 	http.HandleFunc("/plans", listPlans)
 	http.HandleFunc("/plan", addPlan)
+
+	fileServer := http.FileServer(http.Dir(STATIC_DIR))
+	http.Handle("/", http.RedirectHandler("/static/index.html", http.StatusMovedPermanently))
+	http.Handle("/static/", http.StripPrefix("/static", fileServer))
+
 	log.Fatal(s.ListenAndServe())
 }
