@@ -3,7 +3,6 @@ import planPB from 'plan.proto'
 import { makeIdFetch } from './serv';
 
 const id = await fetch("http://0.0.0.0:5000/join/artem").then(response => response.text()).then(parseInt);
-console.log(id);
 const IdContext = createContext(id);
 
 interface MessageProps {
@@ -55,19 +54,22 @@ function PlanControls({ handleSubmit }: {
 function Plans(): ReactNode {
     const id = useContext(IdContext);
     const f = makeIdFetch(id);
-    const [agenda, setAgenda] = useState<planPB.plan.IAgenda>({});
+    const [agenda, setAgenda] = useState<planPB.plan.IPlan[]>([]);
     useEffect(() => {
-        f("http://0.0.0.0:5000/plans", {headers:{}})
+        const controller = new AbortController()
+        const signal = controller.signal
+        f("http://0.0.0.0:5000/plans", {headers:{}, signal})
             .then(response => response.arrayBuffer())
             .then(buffer => planPB.plan.Agenda.decode(new Uint8Array(buffer)))
-            .then(res => setAgenda(res))
+            .then(res => setAgenda(res.plans))
+            .catch(_ => {})
+        return () => { controller.abort("Use effect cancelled") }
     }, []);
 
     function makeNewPlan(synopsis: string) {
         const plan = planPB.plan.Plan.create({
             synopsis
         });
-        console.log(id);
         const f = makeIdFetch(id);
         f("http://0.0.0.0:5000/plan", {
             method: 'POST',
@@ -75,16 +77,18 @@ function Plans(): ReactNode {
                 'Content-Type': 'application/json;charset=utf-8'
             },
             body: JSON.stringify(plan.toJSON()),
-        }).then(response => {
-            console.log(response);
         })
+            .then(response => response.arrayBuffer())
+            .then(buffer => planPB.plan.Plan.decode(new Uint8Array(buffer)))
+            .then(res => setAgenda([res, ...agenda]))
+            .catch(_ => {})
     }
 
     return (
         <div className="plans">
             <PlanControls handleSubmit={makeNewPlan} />
             <div className="plans-body">
-                {agenda.plans?.map((props, index) =>
+                {agenda.map((props, index) =>
                     <PlanComponent
                         synopsis={props.synopsis ?? ''}
                         id={props.id ?? 0}
