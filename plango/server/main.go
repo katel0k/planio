@@ -28,12 +28,14 @@ var useCookies *bool
 func getIdFromCookie(r *http.Request) (int, error) {
 	if *useCookies {
 		idStr, err := r.Cookie("id")
+		log.Printf("Got id from cookie %s", idStr)
 		if err == http.ErrNoCookie {
 			return 0, err
 		}
 		return strconv.Atoi(idStr.Value)
 	} else {
 		idStr := r.Header.Get("Id")
+		log.Printf("Got id from header %s", idStr)
 		if idStr == "" {
 			return 0, nil
 		}
@@ -48,7 +50,7 @@ var userChannelsMutex sync.RWMutex
 
 func joinHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Id")
 	id, err := db.CreateNewUser(r.PathValue("nickname"))
 	if err != nil {
 		log.Default().Print(err)
@@ -128,7 +130,7 @@ func listUsers(w http.ResponseWriter, _ *http.Request) {
 
 func listPlans(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Id")
 	id, _ := getIdFromCookie(r)
 	agenda, _ := db.GetAllPlans(id)
 	marsh, _ := proto.Marshal(agenda)
@@ -137,7 +139,7 @@ func listPlans(w http.ResponseWriter, r *http.Request) {
 
 func addPlan(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Id")
 	if r.Method != "POST" {
 		return
 	}
@@ -163,6 +165,15 @@ func addPlan(w http.ResponseWriter, r *http.Request) {
 
 const STATIC_DIR string = "../../planer/dist"
 
+func staticHandler(fileServer http.Handler) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Id")
+
+		http.StripPrefix("/static", fileServer).ServeHTTP(w, r)
+	}
+}
+
 func main() {
 	port := flag.Int("p", 32768, "Database port")
 	useCookies = flag.Bool("c", false, "Use cookies or simple join id and a header")
@@ -180,10 +191,9 @@ func main() {
 
 	http.HandleFunc("/plans", listPlans)
 	http.HandleFunc("/plan", addPlan)
-
 	fileServer := http.FileServer(http.Dir(STATIC_DIR))
 	http.Handle("/", http.RedirectHandler("/static/index.html", http.StatusMovedPermanently))
-	http.Handle("/static/", http.StripPrefix("/static", fileServer))
+	http.HandleFunc("/static/", staticHandler(fileServer))
 
 	log.Fatal(s.ListenAndServe())
 }
