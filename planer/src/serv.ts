@@ -1,6 +1,8 @@
-export type fetchFunc = (URL: string | URL, options: RequestInit) => Promise<Response>
+export interface fetchFunc {
+    (URL: string | URL, options?: RequestInit): Promise<Response>
+}
 export function makeIdFetch(id: number): fetchFunc {
-    return function (URL: string | URL, {headers, ...options}: RequestInit): Promise<Response> {
+    const func : fetchFunc = function (URL, {headers, ...options}={}) {
         return fetch(URL, {
             headers: {
                 id: String(id),
@@ -9,4 +11,5 @@ export function makeIdFetch(id: number): fetchFunc {
             ...options
         });
     }
+    return func;
 }
