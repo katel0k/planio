@@ -1,5 +1,10 @@
-import { ReactNode, useState, useEffect } from 'react'
+import { ReactNode, useState, useEffect, createContext, useContext } from 'react'
 import planPB from 'plan.proto'
+import { makeIdFetch } from './serv';
+
+const id = await fetch("http://0.0.0.0:5000/join/artem").then(response => response.text()).then(parseInt);
+console.log(id);
+const IdContext = createContext(id);
 
 interface MessageProps {
     text: string,
@@ -33,28 +38,65 @@ function PlanComponent({ synopsis, id }: PlanProps): ReactNode {
     )
 }
 
+function PlanControls({ handleSubmit }: {
+    handleSubmit: (synopsisValue: string) => void
+}): ReactNode {
+    const [synopsis, setSynopsis] = useState('');
+    return (
+        <div className="plans-control">
+            <input type="text" name="synopsis" onChange={e => setSynopsis(e.target.value)} />
+            <input type="button" value="new plan" onClick={
+                () => handleSubmit(synopsis)
+            } />
+        </div>
+    )
+}
+
 function Plans(): ReactNode {
+    const id = useContext(IdContext);
+    const f = makeIdFetch(id);
     const [agenda, setAgenda] = useState<planPB.plan.IAgenda>({});
     useEffect(() => {
-        fetch("http://0.0.0.0:5000/plans")
+        f("http://0.0.0.0:5000/plans", {headers:{}})
             .then(response => response.arrayBuffer())
             .then(buffer => planPB.plan.Agenda.decode(new Uint8Array(buffer)))
             .then(res => setAgenda(res))
-    });
+    }, []);
+
+    function makeNewPlan(synopsis: string) {
+        const plan = planPB.plan.Plan.create({
+            synopsis
+        });
+        console.log(id);
+        const f = makeIdFetch(id);
+        f("http://0.0.0.0:5000/plan", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify(plan.toJSON()),
+        }).then(response => {
+            console.log(response);
+        })
+    }
 
     return (
         <div className="plans">
-            {agenda.plans?.map((props, index) =>
-                <PlanComponent
-                    synopsis={props.synopsis ?? ''}
-                    id={props.id ?? 0}
-                    key={index} />
-            )}
+            <PlanControls handleSubmit={makeNewPlan} />
+            <div className="plans-body">
+                {agenda.plans?.map((props, index) =>
+                    <PlanComponent
+                        synopsis={props.synopsis ?? ''}
+                        id={props.id ?? 0}
+                        key={index} />
+                )}
+            </div>
         </div>
     )
 }
 
 export default function App() {
+
     return (
         <div className="wrapper">
             <Plans />
