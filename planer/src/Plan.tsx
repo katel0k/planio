@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect, useContext } from 'react';
-import planPB from 'plan.proto'
-import { makeIdFetch } from './serv';
+import { plan as planPB } from 'plan.proto'
+import { makeIdFetch, fetchFunc } from './serv';
 import { IdContext } from './App'
 import 'plan.css'
 
@@ -23,10 +23,11 @@ function PlanComponent({ synopsis, id }: PlanProps): ReactNode {
 function PlanControls({ handleSubmit }: {
     handleSubmit: (synopsisValue: string) => void
 }): ReactNode {
-    const [synopsis, setSynopsis] = useState('');
+    const [synopsis, setSynopsis] = useState<string>('');
     return (
         <div className="plans-controls">
-            <input className="plan-synopsis__text plans-controls__synopsis-input" type="text" name="synopsis" onChange={e => setSynopsis(e.target.value)} />
+            <input className="plan-synopsis__text plans-controls__synopsis-input"
+                   type="text" name="synopsis" onChange={e => setSynopsis(e.target.value)} />
             <input type="button" value="new plan" onClick={
                 () => handleSubmit(synopsis)
             } />
@@ -35,25 +36,25 @@ function PlanControls({ handleSubmit }: {
 }
 
 export function Plans(): ReactNode {
-    const id = useContext(IdContext);
-    const f = makeIdFetch(id);
-    const [agenda, setAgenda] = useState<planPB.plan.IPlan[]>([]);
+    const id = useContext<number>(IdContext);
+    const f: fetchFunc = makeIdFetch(id);
+    const [agenda, setAgenda] = useState<planPB.IPlan[]>([]);
     useEffect(() => {
         const controller = new AbortController()
         const signal = controller.signal
-        f("http://0.0.0.0:5000/plans", {headers:{}, signal})
-            .then(response => response.arrayBuffer())
-            .then(buffer => planPB.plan.Agenda.decode(new Uint8Array(buffer)))
-            .then(res => setAgenda(res.plans))
+        f("http://0.0.0.0:5000/plans", { signal })
+            .then((response: Response) => response.arrayBuffer())
+            .then((buffer: ArrayBuffer) => planPB.Agenda.decode(new Uint8Array(buffer)))
+            .then((res: planPB.Agenda) => setAgenda(res.plans))
             .catch(_ => {})
         return () => { controller.abort("Use effect cancelled") }
     }, []);
 
     function makeNewPlan(synopsis: string) {
-        const plan = planPB.plan.Plan.create({
+        const plan = planPB.Plan.create({
             synopsis
         });
-        const f = makeIdFetch(id);
+        const f: fetchFunc = makeIdFetch(id);
         f("http://0.0.0.0:5000/plan", {
             method: 'POST',
             headers: {
@@ -61,9 +62,9 @@ export function Plans(): ReactNode {
             },
             body: JSON.stringify(plan.toJSON()),
         })
-            .then(response => response.arrayBuffer())
-            .then(buffer => planPB.plan.Plan.decode(new Uint8Array(buffer)))
-            .then(res => setAgenda([res, ...agenda]))
+            .then((response: Response) => response.arrayBuffer())
+            .then((buffer: ArrayBuffer) => planPB.Plan.decode(new Uint8Array(buffer)))
+            .then((res: planPB.Plan) => setAgenda([res, ...agenda]))
             .catch(_ => {})
     }
 
@@ -72,7 +73,7 @@ export function Plans(): ReactNode {
             <PlanControls handleSubmit={makeNewPlan} />
             <div className="plans-body-wrapper">
                 <div className="plans-body">
-                    {agenda.map((props, index) =>
+                    {agenda.map((props: planPB.IPlan, index: number) =>
                         <PlanComponent
                             synopsis={props.synopsis ?? ''}
                             id={props.id ?? 0}
