@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -48,24 +49,51 @@ var userMessageChannels map[int]chan *msg_pb.MsgResponse = make(map[int]chan *ms
 var userChannelsMutex sync.RWMutex
 
 func joinHandler(w http.ResponseWriter, r *http.Request) {
-	id, err := db.CreateNewUser(r.PathValue("nickname"))
-	if err != nil {
-		log.Default().Print(err)
-		log.Default().Printf("Failed to add user in database")
+	var err error
+	headerContentType := r.Header.Get("Content-Type")
+	joinReq := join_pb.JoinRequest{}
+	if strings.Contains(headerContentType, "application/json") {
+		err = json.NewDecoder(r.Body).Decode(&joinReq)
 	} else {
-		userChannelsMutex.Lock()
-		userMessageChannels[id] = make(chan *msg_pb.MsgResponse)
-		userChannelsMutex.Unlock()
-		log.Default().Printf("Got join request for %d", id)
+		buffer := make([]byte, 1024)
+		n, _ := r.Body.Read(buffer)
+		err = proto.Unmarshal(buffer[0:n], &joinReq)
+	}
+	if err != nil {
+		return
+	}
+
+	id, err := db.FindUser(joinReq.Username)
+	var isNew bool = false
+
+	if err != nil {
+		if errors.Is(err, lib.ErrNotFound) {
+			log.Default().Printf("creating new user %s", joinReq.Username)
+			id, err = db.CreateNewUser(joinReq.Username)
+			log.Default().Print(err)
+			if err != nil {
+				return
+			}
+			isNew = true
+		} else {
+			return
+		}
+	}
+
+	userChannelsMutex.Lock()
+	userMessageChannels[id] = make(chan *msg_pb.MsgResponse)
+	userChannelsMutex.Unlock()
+	log.Default().Printf("Got join request for %d", id)
+	if *useCookies {
 		cookie := http.Cookie{
 			Name:   "id",
 			Value:  strconv.Itoa(id),
 			MaxAge: 300,
 		}
 		http.SetCookie(w, &cookie)
-		marsh, _ := proto.Marshal(&join_pb.JoinResponse{Id: int32(id)})
-		w.Write(marsh)
 	}
+	marsh, _ := proto.Marshal(&join_pb.JoinResponse{Id: int32(id), IsNew: isNew})
+	w.Write(marsh)
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
@@ -138,11 +166,11 @@ func addPlanHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	headerContentTtype := r.Header.Get("Content-Type")
+	headerContentType := r.Header.Get("Content-Type")
 	id, _ := getIdFromCookie(r)
 	var planReq plan_pb.PlanRequest
 
-	if strings.Contains(headerContentTtype, "application/json") {
+	if strings.Contains(headerContentType, "application/json") {
 		json.NewDecoder(r.Body).Decode(&planReq)
 	} else {
 		buffer := make([]byte, 1024)
@@ -163,6 +191,9 @@ func cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Id")
+		if r.Method == "OPTIONS" {
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }
@@ -176,7 +207,7 @@ func main() {
 	}
 	defer db.Pool.Close()
 	s := &http.Server{Addr: ":5000"}
-	http.Handle("/join/{nickname}", cors(http.HandlerFunc(joinHandler)))
+	http.Handle("/join", cors(http.HandlerFunc(joinHandler)))
 	http.Handle("/ping", cors(http.HandlerFunc(pingHandler)))
 	http.Handle("/message", cors(http.HandlerFunc(messageHandler)))
 

@@ -2,6 +2,7 @@ package lib
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -28,13 +29,25 @@ func ConnectDB(port int) *pgxpool.Pool {
 	return dbpool
 }
 
+var ErrNotFound = errors.New("not found")
+
+// @brief returns user id if it was found, else ErrNotFound
+func (db Database) FindUser(username string) (int, error) {
+	row := db.Pool.QueryRow(context.Background(), "SELECT id FROM users WHERE nickname=$1", username)
+	var id int
+	err := row.Scan(&id)
+	if err != nil {
+		return 0, ErrNotFound
+	} else {
+		return id, nil
+	}
+}
+
 func (db Database) CreateNewUser(username string) (int, error) {
 	row := db.Pool.QueryRow(context.Background(), "INSERT INTO users(nickname) VALUES ($1) RETURNING id", username)
 	var id int
 	err := row.Scan(&id)
 	if err != nil {
-		log.Default().Print(err)
-		log.Default().Printf("Failed to add user in database")
 		return 0, err
 	} else {
 		return id, nil

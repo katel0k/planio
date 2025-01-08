@@ -5,9 +5,10 @@ package join;
 option go_package = "join/";
 
 message JoinRequest {
-    
+    string username = 1;
 }
 
 message JoinResponse {
     int32 id = 1;
+    bool is_new = 2;
 }
