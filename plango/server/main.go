@@ -15,6 +15,7 @@ import (
 	"github.com/katel0k/planio/server/lib"
 	"google.golang.org/protobuf/proto"
 
+	join_pb "github.com/katel0k/planio/server/build/join"
 	msg_pb "github.com/katel0k/planio/server/build/msg"
 	plan_pb "github.com/katel0k/planio/server/build/plan"
 )
@@ -28,14 +29,12 @@ var useCookies *bool
 func getIdFromCookie(r *http.Request) (int, error) {
 	if *useCookies {
 		idStr, err := r.Cookie("id")
-		log.Printf("Got id from cookie %s", idStr)
 		if err == http.ErrNoCookie {
 			return 0, err
 		}
 		return strconv.Atoi(idStr.Value)
 	} else {
 		idStr := r.Header.Get("Id")
-		log.Printf("Got id from header %s", idStr)
 		if idStr == "" {
 			return 0, nil
 		}
@@ -49,8 +48,6 @@ var userMessageChannels map[int]chan *msg_pb.MsgResponse = make(map[int]chan *ms
 var userChannelsMutex sync.RWMutex
 
 func joinHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Id")
 	id, err := db.CreateNewUser(r.PathValue("nickname"))
 	if err != nil {
 		log.Default().Print(err)
@@ -66,7 +63,8 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 			MaxAge: 300,
 		}
 		http.SetCookie(w, &cookie)
-		w.Write([]byte(fmt.Sprintf("%d", id)))
+		marsh, _ := proto.Marshal(&join_pb.JoinResponse{Id: int32(id)})
+		w.Write(marsh)
 	}
 }
 
@@ -120,7 +118,7 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func listUsers(w http.ResponseWriter, _ *http.Request) {
+func listUsersHandler(w http.ResponseWriter, _ *http.Request) {
 	userChannelsMutex.RLock()
 	for user := range userMessageChannels {
 		w.Write([]byte(fmt.Sprint(user) + " "))
@@ -128,18 +126,14 @@ func listUsers(w http.ResponseWriter, _ *http.Request) {
 	userChannelsMutex.RUnlock()
 }
 
-func listPlans(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Id")
+func listPlansHandler(w http.ResponseWriter, r *http.Request) {
 	id, _ := getIdFromCookie(r)
 	agenda, _ := db.GetAllPlans(id)
 	marsh, _ := proto.Marshal(agenda)
 	w.Write(marsh)
 }
 
-func addPlan(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Id")
+func addPlanHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		return
 	}
@@ -165,13 +159,12 @@ func addPlan(w http.ResponseWriter, r *http.Request) {
 
 const STATIC_DIR string = "../../planer/dist"
 
-func staticHandler(fileServer http.Handler) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func cors(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Id")
-
-		http.StripPrefix("/static", fileServer).ServeHTTP(w, r)
-	}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func main() {
@@ -183,17 +176,17 @@ func main() {
 	}
 	defer db.Pool.Close()
 	s := &http.Server{Addr: ":5000"}
-	http.HandleFunc("/join/{nickname}", joinHandler)
-	http.HandleFunc("/ping", pingHandler)
-	http.HandleFunc("/message", messageHandler)
+	http.Handle("/join/{nickname}", cors(http.HandlerFunc(joinHandler)))
+	http.Handle("/ping", cors(http.HandlerFunc(pingHandler)))
+	http.Handle("/message", cors(http.HandlerFunc(messageHandler)))
 
-	http.HandleFunc("/users", listUsers)
+	http.Handle("/users", cors(http.HandlerFunc(listUsersHandler)))
 
-	http.HandleFunc("/plans", listPlans)
-	http.HandleFunc("/plan", addPlan)
+	http.Handle("/plans", cors(http.HandlerFunc(listPlansHandler)))
+	http.Handle("/plan", cors(http.HandlerFunc(addPlanHandler)))
 	fileServer := http.FileServer(http.Dir(STATIC_DIR))
-	http.Handle("/", http.RedirectHandler("/static/index.html", http.StatusMovedPermanently))
-	http.HandleFunc("/static/", staticHandler(fileServer))
+	http.Handle("/", cors(http.RedirectHandler("/static/index.html", http.StatusMovedPermanently)))
+	http.Handle("/static/", cors(http.StripPrefix("/static", fileServer)))
 
 	log.Fatal(s.ListenAndServe())
 }

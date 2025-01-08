@@ -82,3 +82,8 @@ func (db Database) CreateNewPlan(author_id int, plan *plan_pb.PlanRequest) (*pla
 	}
 	return &res, nil
 }
+
+func (db Database) DeletePlan(plan_id int) error {
+	_, err := db.Pool.Exec(context.Background(), "DELETE FROM plans WHERE id=$1", plan_id)
+	return err
+}
