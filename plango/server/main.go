@@ -28,6 +28,7 @@ type contextKey int
 const (
 	DB contextKey = iota
 	ACTIVE_USERS
+	USE_COOKIES
 )
 
 type ActiveUsers struct {
@@ -39,10 +40,12 @@ type ActiveUsers struct {
 // If you are serving html from file://, cookies just dont work
 // So instead, I'm just gonna send an "Id" header from frontend (REALLY SAFE METHOD TRUST ME)
 // It is also good for testing, so in the future I'm probably going to hide it behind an interface
-var useCookies *bool
-
-func getIdFromCookie(r *http.Request) (int, error) {
-	if *useCookies {
+func getId(r *http.Request) (int, error) {
+	useCookies, ok := r.Context().Value(USE_COOKIES).(bool)
+	if !ok {
+		useCookies = DEFAULT_USE_COOKIES
+	}
+	if useCookies {
 		idStr, err := r.Cookie("id")
 		if err == http.ErrNoCookie {
 			return 0, err
@@ -94,7 +97,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 	activeUsers.body[id] = make(chan *msg_pb.MsgResponse)
 	activeUsers.Unlock()
 	log.Default().Printf("Got join request for %d", id)
-	if *useCookies {
+	if r.Context().Value(ACTIVE_USERS).(bool) {
 		cookie := http.Cookie{
 			Name:   "id",
 			Value:  strconv.Itoa(id),
@@ -120,7 +123,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		log.Default().Print("error ", err)
 		return
 	} else {
-		id, _ := getIdFromCookie(r)
+		id, _ := getId(r)
 		msgId, err := r.Context().Value(DB).(lib.Database).CreateNewMessage(id, receiver, msg.Text)
 		if err != nil {
 			return
@@ -145,7 +148,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 func pingHandler(w http.ResponseWriter, r *http.Request) {
 	log.Default().Printf("GET %s", r.URL)
 
-	id, _ := getIdFromCookie(r)
+	id, _ := getId(r)
 	select {
 	case msg := <-r.Context().Value(ACTIVE_USERS).(*ActiveUsers).body[id]:
 		marsh, _ := proto.Marshal(msg)
@@ -167,7 +170,7 @@ func listUsersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func listPlansHandler(w http.ResponseWriter, r *http.Request) {
-	id, _ := getIdFromCookie(r)
+	id, _ := getId(r)
 	agenda, _ := r.Context().Value(DB).(lib.Database).GetAllPlans(id)
 	marsh, _ := proto.Marshal(agenda)
 	w.Write(marsh)
@@ -179,7 +182,7 @@ func addPlanHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 	headerContentType := r.Header.Get("Content-Type")
-	id, _ := getIdFromCookie(r)
+	id, _ := getId(r)
 	var planReq plan_pb.PlanRequest
 
 	if strings.Contains(headerContentType, "application/json") {
@@ -197,8 +200,6 @@ func addPlanHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(marsh)
 }
 
-const STATIC_DIR string = "../../planer/dist"
-
 func cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -210,12 +211,19 @@ func cors(next http.Handler) http.Handler {
 	})
 }
 
+const DEFAULT_STATIC_DIR string = "../../planer/dist"
+const DEFAULT_DATABASE_PORT int = 32768
+const DEFAULT_USE_COOKIES bool = false
+const DEFAULT_SERVER_PORT int = 5000
+
 func main() {
-	port := flag.Int("p", 32768, "Database port")
-	useCookies = flag.Bool("c", false, "Use cookies or simple join id and a header")
+	staticDir := flag.String("static", DEFAULT_STATIC_DIR, "Directory with static files")
+	databasePort := flag.Int("dbp", DEFAULT_DATABASE_PORT, "Database port")
+	useCookies := flag.Bool("c", DEFAULT_USE_COOKIES, "Use cookies or simple join id and a header")
+	serverPort := flag.Int("p", DEFAULT_SERVER_PORT, "Server port")
 	flag.Parse()
 	db := lib.Database{
-		Pool: lib.ConnectDB(*port),
+		Pool: lib.ConnectDB(*databasePort),
 	}
 	defer db.Pool.Close()
 
@@ -224,10 +232,11 @@ func main() {
 	}
 
 	s := &http.Server{
-		Addr: ":5000",
+		Addr: fmt.Sprintf(":%d", *serverPort),
 		ConnContext: func(ctx context.Context, _ net.Conn) context.Context {
 			ctx = context.WithValue(ctx, DB, db)
 			ctx = context.WithValue(ctx, ACTIVE_USERS, &activeUsers)
+			ctx = context.WithValue(ctx, USE_COOKIES, *useCookies)
 			return ctx
 		},
 	}
@@ -239,7 +248,7 @@ func main() {
 
 	http.Handle("/plans", cors(http.HandlerFunc(listPlansHandler)))
 	http.Handle("/plan", cors(http.HandlerFunc(addPlanHandler)))
-	fileServer := http.FileServer(http.Dir(STATIC_DIR))
+	fileServer := http.FileServer(http.Dir(*staticDir))
 	http.Handle("/", cors(http.RedirectHandler("/static/index.html", http.StatusMovedPermanently)))
 	http.Handle("/static/", cors(http.StripPrefix("/static", fileServer)))
 
