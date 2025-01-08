@@ -27,11 +27,11 @@ type contextKey int
 
 const (
 	DB contextKey = iota
-	ACTIVE_USERS
+	ONLINE_USERS
 	USE_COOKIES
 )
 
-type ActiveUsers struct {
+type onlineUsers struct {
 	sync.RWMutex
 	body map[int]chan *msg_pb.MsgResponse
 }
@@ -92,12 +92,12 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	activeUsers, _ := r.Context().Value(ACTIVE_USERS).(*ActiveUsers)
-	activeUsers.Lock()
-	activeUsers.body[id] = make(chan *msg_pb.MsgResponse)
-	activeUsers.Unlock()
+	onlineUsers, _ := r.Context().Value(ONLINE_USERS).(*onlineUsers)
+	onlineUsers.Lock()
+	onlineUsers.body[id] = make(chan *msg_pb.MsgResponse)
+	onlineUsers.Unlock()
 	log.Default().Printf("Got join request for %d", id)
-	if r.Context().Value(ACTIVE_USERS).(bool) {
+	if r.Context().Value(ONLINE_USERS).(bool) {
 		cookie := http.Cookie{
 			Name:   "id",
 			Value:  strconv.Itoa(id),
@@ -133,15 +133,15 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 			Text:     msg.Text,
 			AuthorId: int32(id),
 		}
-		activeUsers, _ := r.Context().Value(ACTIVE_USERS).(*ActiveUsers)
-		activeUsers.RLock()
-		if user, isOnline := activeUsers.body[receiver]; isOnline {
+		onlineUsers, _ := r.Context().Value(ONLINE_USERS).(*onlineUsers)
+		onlineUsers.RLock()
+		if user, isOnline := onlineUsers.body[receiver]; isOnline {
 			go (func() {
 				user <- &msg
 			})()
 			log.Default().Printf("Sent message %s", msg.Text)
 		}
-		activeUsers.RUnlock()
+		onlineUsers.RUnlock()
 	}
 }
 
@@ -150,7 +150,7 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, _ := getId(r)
 	select {
-	case msg := <-r.Context().Value(ACTIVE_USERS).(*ActiveUsers).body[id]:
+	case msg := <-r.Context().Value(ONLINE_USERS).(*onlineUsers).body[id]:
 		marsh, _ := proto.Marshal(msg)
 		w.Write(marsh)
 		log.Default().Printf("Pong message %s", msg.String())
@@ -160,13 +160,13 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func listUsersHandler(w http.ResponseWriter, r *http.Request) {
-	activeUsers, _ := r.Context().Value(ACTIVE_USERS).(*ActiveUsers)
-	activeUsers.RLock()
-	for user := range activeUsers.body {
+func onlineUsersHandler(w http.ResponseWriter, r *http.Request) {
+	onlineUsers, _ := r.Context().Value(ONLINE_USERS).(*onlineUsers)
+	onlineUsers.RLock()
+	for user := range onlineUsers.body {
 		w.Write([]byte(fmt.Sprint(user) + " "))
 	}
-	activeUsers.RUnlock()
+	onlineUsers.RUnlock()
 }
 
 func listPlansHandler(w http.ResponseWriter, r *http.Request) {
@@ -227,7 +227,7 @@ func main() {
 	}
 	defer db.Pool.Close()
 
-	activeUsers := ActiveUsers{
+	onlineUsers := onlineUsers{
 		body: make(map[int]chan *msg_pb.MsgResponse),
 	}
 
@@ -235,7 +235,7 @@ func main() {
 		Addr: fmt.Sprintf(":%d", *serverPort),
 		ConnContext: func(ctx context.Context, _ net.Conn) context.Context {
 			ctx = context.WithValue(ctx, DB, db)
-			ctx = context.WithValue(ctx, ACTIVE_USERS, &activeUsers)
+			ctx = context.WithValue(ctx, ONLINE_USERS, &onlineUsers)
 			ctx = context.WithValue(ctx, USE_COOKIES, *useCookies)
 			return ctx
 		},
@@ -244,7 +244,7 @@ func main() {
 	http.Handle("/ping", cors(http.HandlerFunc(pingHandler)))
 	http.Handle("/message", cors(http.HandlerFunc(messageHandler)))
 
-	http.Handle("/users", cors(http.HandlerFunc(listUsersHandler)))
+	http.Handle("/online", cors(http.HandlerFunc(onlineUsersHandler)))
 
 	http.Handle("/plans", cors(http.HandlerFunc(listPlansHandler)))
 	http.Handle("/plan", cors(http.HandlerFunc(addPlanHandler)))
