@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -20,6 +22,18 @@ import (
 	msg_pb "github.com/katel0k/planio/server/build/msg"
 	plan_pb "github.com/katel0k/planio/server/build/plan"
 )
+
+type contextKey int
+
+const (
+	DB contextKey = iota
+	ACTIVE_USERS
+)
+
+type ActiveUsers struct {
+	sync.RWMutex
+	body map[int]chan *msg_pb.MsgResponse
+}
 
 // FIXME: that is a temporary solution because I was too lazy to setup a proper server
 // If you are serving html from file://, cookies just dont work
@@ -43,11 +57,6 @@ func getIdFromCookie(r *http.Request) (int, error) {
 	}
 }
 
-var db lib.Database
-
-var userMessageChannels map[int]chan *msg_pb.MsgResponse = make(map[int]chan *msg_pb.MsgResponse)
-var userChannelsMutex sync.RWMutex
-
 func joinHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	headerContentType := r.Header.Get("Content-Type")
@@ -63,13 +72,13 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := db.FindUser(joinReq.Username)
+	id, err := r.Context().Value(DB).(lib.Database).FindUser(joinReq.Username)
 	var isNew bool = false
 
 	if err != nil {
 		if errors.Is(err, lib.ErrNotFound) {
 			log.Default().Printf("creating new user %s", joinReq.Username)
-			id, err = db.CreateNewUser(joinReq.Username)
+			id, err = r.Context().Value(DB).(lib.Database).CreateNewUser(joinReq.Username)
 			log.Default().Print(err)
 			if err != nil {
 				return
@@ -80,9 +89,10 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	userChannelsMutex.Lock()
-	userMessageChannels[id] = make(chan *msg_pb.MsgResponse)
-	userChannelsMutex.Unlock()
+	activeUsers, _ := r.Context().Value(ACTIVE_USERS).(*ActiveUsers)
+	activeUsers.Lock()
+	activeUsers.body[id] = make(chan *msg_pb.MsgResponse)
+	activeUsers.Unlock()
 	log.Default().Printf("Got join request for %d", id)
 	if *useCookies {
 		cookie := http.Cookie{
@@ -111,7 +121,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		id, _ := getIdFromCookie(r)
-		msgId, err := db.CreateNewMessage(id, receiver, msg.Text)
+		msgId, err := r.Context().Value(DB).(lib.Database).CreateNewMessage(id, receiver, msg.Text)
 		if err != nil {
 			return
 		}
@@ -120,14 +130,15 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 			Text:     msg.Text,
 			AuthorId: int32(id),
 		}
-		userChannelsMutex.RLock()
-		if user, isOnline := userMessageChannels[receiver]; isOnline {
+		activeUsers, _ := r.Context().Value(ACTIVE_USERS).(*ActiveUsers)
+		activeUsers.RLock()
+		if user, isOnline := activeUsers.body[receiver]; isOnline {
 			go (func() {
 				user <- &msg
 			})()
 			log.Default().Printf("Sent message %s", msg.Text)
 		}
-		userChannelsMutex.RUnlock()
+		activeUsers.RUnlock()
 	}
 }
 
@@ -136,7 +147,7 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, _ := getIdFromCookie(r)
 	select {
-	case msg := <-userMessageChannels[id]:
+	case msg := <-r.Context().Value(ACTIVE_USERS).(*ActiveUsers).body[id]:
 		marsh, _ := proto.Marshal(msg)
 		w.Write(marsh)
 		log.Default().Printf("Pong message %s", msg.String())
@@ -146,17 +157,18 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func listUsersHandler(w http.ResponseWriter, _ *http.Request) {
-	userChannelsMutex.RLock()
-	for user := range userMessageChannels {
+func listUsersHandler(w http.ResponseWriter, r *http.Request) {
+	activeUsers, _ := r.Context().Value(ACTIVE_USERS).(*ActiveUsers)
+	activeUsers.RLock()
+	for user := range activeUsers.body {
 		w.Write([]byte(fmt.Sprint(user) + " "))
 	}
-	userChannelsMutex.RUnlock()
+	activeUsers.RUnlock()
 }
 
 func listPlansHandler(w http.ResponseWriter, r *http.Request) {
 	id, _ := getIdFromCookie(r)
-	agenda, _ := db.GetAllPlans(id)
+	agenda, _ := r.Context().Value(DB).(lib.Database).GetAllPlans(id)
 	marsh, _ := proto.Marshal(agenda)
 	w.Write(marsh)
 }
@@ -180,7 +192,7 @@ func addPlanHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	plan, _ := db.CreateNewPlan(id, &planReq)
+	plan, _ := r.Context().Value(DB).(lib.Database).CreateNewPlan(id, &planReq)
 	marsh, _ := proto.Marshal(plan)
 	w.Write(marsh)
 }
@@ -202,11 +214,23 @@ func main() {
 	port := flag.Int("p", 32768, "Database port")
 	useCookies = flag.Bool("c", false, "Use cookies or simple join id and a header")
 	flag.Parse()
-	db = lib.Database{
+	db := lib.Database{
 		Pool: lib.ConnectDB(*port),
 	}
 	defer db.Pool.Close()
-	s := &http.Server{Addr: ":5000"}
+
+	activeUsers := ActiveUsers{
+		body: make(map[int]chan *msg_pb.MsgResponse),
+	}
+
+	s := &http.Server{
+		Addr: ":5000",
+		ConnContext: func(ctx context.Context, _ net.Conn) context.Context {
+			ctx = context.WithValue(ctx, DB, db)
+			ctx = context.WithValue(ctx, ACTIVE_USERS, &activeUsers)
+			return ctx
+		},
+	}
 	http.Handle("/join", cors(http.HandlerFunc(joinHandler)))
 	http.Handle("/ping", cors(http.HandlerFunc(pingHandler)))
 	http.Handle("/message", cors(http.HandlerFunc(messageHandler)))
