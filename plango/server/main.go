@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -18,9 +17,9 @@ import (
 	"github.com/katel0k/planio/server/lib"
 	"google.golang.org/protobuf/proto"
 
-	join_pb "github.com/katel0k/planio/server/build/join"
-	msg_pb "github.com/katel0k/planio/server/build/msg"
-	plan_pb "github.com/katel0k/planio/server/build/plan"
+	joinPB "github.com/katel0k/planio/server/build/join"
+	msgPB "github.com/katel0k/planio/server/build/msg"
+	planPB "github.com/katel0k/planio/server/build/plan"
 )
 
 type contextKey int
@@ -33,7 +32,7 @@ const (
 
 type onlineUsers struct {
 	sync.RWMutex
-	body map[int]chan *msg_pb.MsgResponse
+	body map[int]chan *msgPB.MsgResponse
 }
 
 // FIXME: that is a temporary solution because I was too lazy to setup a proper server
@@ -60,18 +59,24 @@ func getId(r *http.Request) (int, error) {
 	}
 }
 
-func joinHandler(w http.ResponseWriter, r *http.Request) {
+// gets proto request base on content type. If application/json - gets it from JSON, otherwise - from bytes
+func getRequest(r *http.Request, m proto.Message) error {
 	var err error
 	headerContentType := r.Header.Get("Content-Type")
-	joinReq := join_pb.JoinRequest{}
 	if strings.Contains(headerContentType, "application/json") {
-		err = json.NewDecoder(r.Body).Decode(&joinReq)
+		err = json.NewDecoder(r.Body).Decode(m)
 	} else {
 		buffer := make([]byte, 1024)
 		n, _ := r.Body.Read(buffer)
-		err = proto.Unmarshal(buffer[0:n], &joinReq)
+		err = proto.Unmarshal(buffer[0:n], m)
 	}
-	if err != nil {
+	return err
+}
+
+func joinHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	var joinReq joinPB.JoinRequest
+	if getRequest(r, &joinReq) != nil {
 		return
 	}
 
@@ -94,7 +99,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 
 	onlineUsers, _ := r.Context().Value(ONLINE_USERS).(*onlineUsers)
 	onlineUsers.Lock()
-	onlineUsers.body[id] = make(chan *msg_pb.MsgResponse)
+	onlineUsers.body[id] = make(chan *msgPB.MsgResponse)
 	onlineUsers.Unlock()
 	log.Default().Printf("Got join request for %d", id)
 	if r.Context().Value(ONLINE_USERS).(bool) {
@@ -105,44 +110,37 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		http.SetCookie(w, &cookie)
 	}
-	marsh, _ := proto.Marshal(&join_pb.JoinResponse{Id: int32(id), IsNew: isNew})
+	marsh, _ := proto.Marshal(&joinPB.JoinResponse{Id: int32(id), IsNew: isNew})
 	w.Write(marsh)
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
-	var bytes []byte = make([]byte, 1024)
-	n, err := r.Body.Read(bytes)
-	msg := msg_pb.MsgRequest{}
-	err2 := proto.Unmarshal(bytes[0:n], &msg)
-	if err2 != nil {
-		log.Print(err2)
+	defer r.Body.Close()
+	var msg msgPB.MsgRequest
+	if getRequest(r, &msg) != nil {
 		return
 	}
 	receiver := int(msg.ReceiverId)
-	if err != nil && err != io.EOF {
-		log.Default().Print("error ", err)
+
+	id, _ := getId(r)
+	msgId, err := r.Context().Value(DB).(lib.Database).CreateNewMessage(id, receiver, msg.Text)
+	if err != nil {
 		return
-	} else {
-		id, _ := getId(r)
-		msgId, err := r.Context().Value(DB).(lib.Database).CreateNewMessage(id, receiver, msg.Text)
-		if err != nil {
-			return
-		}
-		msg := msg_pb.MsgResponse{
-			Id:       int32(msgId),
-			Text:     msg.Text,
-			AuthorId: int32(id),
-		}
-		onlineUsers, _ := r.Context().Value(ONLINE_USERS).(*onlineUsers)
-		onlineUsers.RLock()
-		if user, isOnline := onlineUsers.body[receiver]; isOnline {
-			go (func() {
-				user <- &msg
-			})()
-			log.Default().Printf("Sent message %s", msg.Text)
-		}
-		onlineUsers.RUnlock()
 	}
+	response := msgPB.MsgResponse{
+		Id:       int32(msgId),
+		Text:     msg.Text,
+		AuthorId: int32(id),
+	}
+	onlineUsers, _ := r.Context().Value(ONLINE_USERS).(*onlineUsers)
+	onlineUsers.RLock()
+	if user, isOnline := onlineUsers.body[receiver]; isOnline {
+		go (func() {
+			user <- &response
+		})()
+		log.Default().Printf("Sent message %s", msg.Text)
+	}
+	onlineUsers.RUnlock()
 }
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +152,7 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 		marsh, _ := proto.Marshal(msg)
 		w.Write(marsh)
 		log.Default().Printf("Pong message %s", msg.String())
-	case <-time.After(time.Second * 4):
+	case <-time.After(PING_RESPONSE_TIME):
 		w.Write([]byte("pong"))
 		log.Default().Print("pong")
 	}
@@ -181,19 +179,10 @@ func addPlanHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	headerContentType := r.Header.Get("Content-Type")
 	id, _ := getId(r)
-	var planReq plan_pb.PlanRequest
-
-	if strings.Contains(headerContentType, "application/json") {
-		json.NewDecoder(r.Body).Decode(&planReq)
-	} else {
-		buffer := make([]byte, 1024)
-		n, _ := r.Body.Read(buffer)
-		err := proto.Unmarshal(buffer[0:n], &planReq)
-		if err != nil {
-			return
-		}
+	var planReq planPB.PlanRequest
+	if getRequest(r, &planReq) != nil {
+		return
 	}
 	plan, _ := r.Context().Value(DB).(lib.Database).CreateNewPlan(id, &planReq)
 	marsh, _ := proto.Marshal(plan)
@@ -211,6 +200,7 @@ func cors(next http.Handler) http.Handler {
 	})
 }
 
+const PING_RESPONSE_TIME time.Duration = time.Second * 4
 const DEFAULT_STATIC_DIR string = "../../planer/dist"
 const DEFAULT_DATABASE_PORT int = 32768
 const DEFAULT_USE_COOKIES bool = false
@@ -228,7 +218,7 @@ func main() {
 	defer db.Pool.Close()
 
 	onlineUsers := onlineUsers{
-		body: make(map[int]chan *msg_pb.MsgResponse),
+		body: make(map[int]chan *msgPB.MsgResponse),
 	}
 
 	s := &http.Server{
