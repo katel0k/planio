@@ -45,7 +45,8 @@ module.exports = {
                         paths: globSync(path.resolve(protoPath, './*.proto')),
                         pbjsArgs: [],
                         pbts: {
-                            outDir: path.join(__dirname, './src/protos/')
+                            output: protobufFile =>
+                                path.join(__dirname, './src/protos/', path.basename(protobufFile) + '.d.ts')
                         },
                         target: 'static-module',
                     },
