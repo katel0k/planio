@@ -42,7 +42,7 @@ export function Plans(): ReactNode {
     useEffect(() => {
         const controller = new AbortController()
         const signal = controller.signal
-        f("http://0.0.0.0:5000/plans", { signal })
+        f("http://0.0.0.0:5000/plan", { signal })
             .then((response: Response) => response.arrayBuffer())
             .then((buffer: ArrayBuffer) => planPB.Agenda.decode(new Uint8Array(buffer)))
             .then((res: planPB.Agenda) => setAgenda(res.plans))

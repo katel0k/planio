@@ -167,26 +167,26 @@ func onlineUsersHandler(w http.ResponseWriter, r *http.Request) {
 	onlineUsers.RUnlock()
 }
 
-func listPlansHandler(w http.ResponseWriter, r *http.Request) {
-	id, _ := getId(r)
-	agenda, _ := r.Context().Value(DB).(lib.Database).GetAllPlans(id)
-	marsh, _ := proto.Marshal(agenda)
-	w.Write(marsh)
-}
-
-func addPlanHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		return
+func planHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		id, _ := getId(r)
+		agenda, _ := r.Context().Value(DB).(lib.Database).GetAllPlans(id)
+		marsh, _ := proto.Marshal(agenda)
+		w.Write(marsh)
+	case "POST":
+		defer r.Body.Close()
+		id, _ := getId(r)
+		var planReq planPB.PlanRequest
+		if getRequest(r, &planReq) != nil {
+			return
+		}
+		plan, _ := r.Context().Value(DB).(lib.Database).CreateNewPlan(id, &planReq)
+		marsh, _ := proto.Marshal(plan)
+		w.Write(marsh)
+	default:
+		w.WriteHeader(http.StatusBadRequest)
 	}
-	defer r.Body.Close()
-	id, _ := getId(r)
-	var planReq planPB.PlanRequest
-	if getRequest(r, &planReq) != nil {
-		return
-	}
-	plan, _ := r.Context().Value(DB).(lib.Database).CreateNewPlan(id, &planReq)
-	marsh, _ := proto.Marshal(plan)
-	w.Write(marsh)
 }
 
 func cors(next http.Handler) http.Handler {
@@ -236,8 +236,7 @@ func main() {
 
 	http.Handle("/online", cors(http.HandlerFunc(onlineUsersHandler)))
 
-	http.Handle("/plans", cors(http.HandlerFunc(listPlansHandler)))
-	http.Handle("/plan", cors(http.HandlerFunc(addPlanHandler)))
+	http.Handle("/plan", cors(http.HandlerFunc(planHandler)))
 	fileServer := http.FileServer(http.Dir(*staticDir))
 	http.Handle("/", cors(http.RedirectHandler("/static/index.html", http.StatusMovedPermanently)))
 	http.Handle("/static/", cors(http.StripPrefix("/static", fileServer)))
