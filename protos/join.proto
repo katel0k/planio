@@ -18,6 +18,6 @@ message User {
     string username = 2;
 }
 
-message JoinedUsersRequest {
+message JoinedUsersResponse {
     repeated User users = 1;
 }

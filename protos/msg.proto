@@ -14,3 +14,12 @@ message MsgResponse {
     int32 author_id = 2;
     string text = 3;
 }
+
+message AllMessagesRequest {
+    int32 sender_id = 1;
+    int32 receiver_id = 2;
+}
+
+message AllMessagesResponse {
+    repeated MsgResponse messages = 1;
+}
