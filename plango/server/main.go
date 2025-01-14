@@ -141,17 +141,13 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
-	log.Default().Printf("GET %s", r.URL)
-
 	id, _ := getId(r)
 	select {
 	case msg := <-r.Context().Value(ONLINE_USERS).(*onlineUsers).body[id]:
 		marsh, _ := proto.Marshal(msg)
 		w.Write(marsh)
-		log.Default().Printf("Pong message %s", msg.String())
 	case <-time.After(PING_RESPONSE_TIME):
 		w.Write([]byte("pong"))
-		log.Default().Print("pong")
 	}
 }
 
