@@ -7,8 +7,8 @@ import 'plan.css'
 interface PlanProps {
     synopsis: string,
     id: number,
-    handleDelete: (id: number) => void,
-    handleChange: (id: number, newSynopsis: string) => void
+    handleDelete: (plan: planPB.DeletePlanRequest) => void,
+    handleChange: (plan: planPB.ChangePlanRequest) => void
 }
 
 function PlanComponent({ synopsis, id, handleChange, handleDelete }: PlanProps): ReactNode {
@@ -32,13 +32,17 @@ function PlanComponent({ synopsis, id, handleChange, handleDelete }: PlanProps):
                         <button className="plan-change"
                             onClick={_ => {
                                 if (isEditing) {
-                                    handleChange(id, synopsisInput);
+                                    handleChange(planPB.ChangePlanRequest.create({
+                                        id,
+                                        synopsis: synopsisInput
+                                    }));
                                     setIsEditing(false);
                                 } else {
                                     setIsEditing(true);
                                 }
                             }}>{isEditing ? 'save' : 'edit'}</button>
-                        <button className="plan-delete" onClick={_ => handleDelete(id)}>delete</button>
+                        <button className="plan-delete" onClick={_ => 
+                            handleDelete(planPB.DeletePlanRequest.create({id}))}>delete</button>
                     </div>
                 </div>
             </div>
@@ -94,17 +98,43 @@ export function Plans(): ReactNode {
             .catch(_ => {})
     }
 
-    function changePlan(id: number, synopsis: string) {
-        // TODO: support change of plans on serverside
-        console.log(`changing plan ${id} to ${synopsis}`);
-        setAgenda(agenda.map((a: planPB.IPlan) => 
-            a.id == id ? planPB.Plan.fromObject({...a, synopsis}) : a));
+    function changePlan(plan: planPB.ChangePlanRequest) {
+        const f: fetchFunc = makeIdFetch(id);
+        f("http://0.0.0.0:5000/plan", {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify(plan.toJSON())
+        })
+            .then((response: Response) => {
+                if (response.ok) {
+                    setAgenda(agenda.map((a: planPB.IPlan) => 
+                        a.id == plan.id ? planPB.Plan.fromObject({...a, synopsis: plan.synopsis}) : a));
+                } else {
+                    alert("error");
+                }
+            })
+            .catch(_ => {})
     }
 
-    function deletePlan(id: number) {
-        // TODO: support deleting of plans on serverside
-        console.log(`deleting plan ${id}`);
-        setAgenda(agenda.filter((a: planPB.IPlan) => a.id != id))
+    function deletePlan(plan: planPB.DeletePlanRequest) {
+        const f: fetchFunc = makeIdFetch(id);
+        f("http://0.0.0.0:5000/plan", {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify(plan.toJSON())
+        })
+            .then((response: Response) => {
+                if (response.ok) {
+                    setAgenda(agenda.filter((a: planPB.IPlan) => a.id != plan.id))
+                } else {
+                    alert("error");
+                }
+            })
+            .catch(_ => {})
     }
 
     return (
