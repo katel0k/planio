@@ -12,3 +12,12 @@ message JoinResponse {
     int32 id = 1;
     bool is_new = 2;
 }
+
+message User {
+    int32 id = 1;
+    string username = 2;
+}
+
+message JoinedUsersRequest {
+    repeated User users = 1;
+}
