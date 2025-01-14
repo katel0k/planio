@@ -6,15 +6,41 @@ import 'plan.css'
 
 interface PlanProps {
     synopsis: string,
-    id: number
+    id: number,
+    handleDelete: (id: number) => void,
+    handleChange: (id: number, newSynopsis: string) => void
 }
 
-function PlanComponent({ synopsis, id }: PlanProps): ReactNode {
+function PlanComponent({ synopsis, id, handleChange, handleDelete }: PlanProps): ReactNode {
+    const [synopsisInput, setSynopsisInput] = useState<string>(synopsis);
+    const [isEditing, setIsEditing] = useState<boolean>(false);
+
     return (
         <div className="plan-wrapper">
             <div className="plan">
                 <div className="plan-id-wrapper"><span className="plan-id">{id}</span></div>
-                <div className="synopsis-wrapper"><span className="synopsis">{synopsis}</span></div>
+                <div className="plan-synopsis-wrapper">
+                    {isEditing ? 
+                        <input className="plan-synopsis-editor" type="text"
+                            value={synopsisInput}
+                            onChange={e => setSynopsisInput(e.target.value)}
+                            name="plan-synopsis-editor" /> :
+                        <span className="plan-synopsis">{synopsis}</span>}
+                </div>
+                <div className="plan-settings-wrapper">
+                    <div className="plan-settings">
+                        <button className="plan-change"
+                            onClick={_ => {
+                                if (isEditing) {
+                                    handleChange(id, synopsisInput);
+                                    setIsEditing(false);
+                                } else {
+                                    setIsEditing(true);
+                                }
+                            }}>{isEditing ? 'save' : 'edit'}</button>
+                        <button className="plan-delete" onClick={_ => handleDelete(id)}>delete</button>
+                    </div>
+                </div>
             </div>
         </div>
     )
@@ -68,6 +94,19 @@ export function Plans(): ReactNode {
             .catch(_ => {})
     }
 
+    function changePlan(id: number, synopsis: string) {
+        // TODO: support change of plans on serverside
+        console.log(`changing plan ${id} to ${synopsis}`);
+        setAgenda(agenda.map((a: planPB.IPlan) => 
+            a.id == id ? planPB.Plan.fromObject({...a, synopsis}) : a));
+    }
+
+    function deletePlan(id: number) {
+        // TODO: support deleting of plans on serverside
+        console.log(`deleting plan ${id}`);
+        setAgenda(agenda.filter((a: planPB.IPlan) => a.id != id))
+    }
+
     return (
         <div className="plans">
             <PlanControls handleSubmit={makeNewPlan} />
@@ -76,6 +115,8 @@ export function Plans(): ReactNode {
                     {agenda.map((props: planPB.IPlan, index: number) =>
                         <PlanComponent
                             synopsis={props.synopsis ?? ''}
+                            handleChange={changePlan}
+                            handleDelete={deletePlan}
                             id={props.id ?? 0}
                             key={index} />
                     )}
