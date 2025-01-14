@@ -102,7 +102,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 	onlineUsers.body[id] = make(chan *msgPB.MsgResponse)
 	onlineUsers.Unlock()
 	log.Default().Printf("Got join request for %d", id)
-	if r.Context().Value(ONLINE_USERS).(bool) {
+	if r.Context().Value(USE_COOKIES).(bool) {
 		cookie := http.Cookie{
 			Name:   "id",
 			Value:  strconv.Itoa(id),
@@ -238,8 +238,7 @@ func main() {
 
 	http.Handle("/plan", cors(http.HandlerFunc(planHandler)))
 	fileServer := http.FileServer(http.Dir(*staticDir))
-	http.Handle("/", cors(http.RedirectHandler("/static/index.html", http.StatusMovedPermanently)))
-	http.Handle("/static/", cors(http.StripPrefix("/static", fileServer)))
+	http.Handle("/", cors(fileServer))
 
 	log.Fatal(s.ListenAndServe())
 }
