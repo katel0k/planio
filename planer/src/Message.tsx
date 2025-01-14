@@ -25,7 +25,7 @@ function Messages({ user }: {user: joinPB.IUser | undefined}): ReactNode {
     useEffect(() => {
         const controller = new AbortController()
         const signal = controller.signal
-        fetch("http://localhost:5000/message", {
+        fetch("http://localhost:5000/messages", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json;charset=utf-8'

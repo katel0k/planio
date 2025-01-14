@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	msg_pb "github.com/katel0k/planio/server/build/msg"
 	plan_pb "github.com/katel0k/planio/server/build/plan"
 )
 
@@ -65,6 +66,18 @@ func (db Database) CreateNewMessage(author_id int, receiver_id int, text string)
 		return 0, err
 	}
 	return id, nil
+}
+
+func (db Database) GetAllMessages(req *msg_pb.AllMessagesRequest) (*msg_pb.AllMessagesResponse, error) {
+	rows, err := db.Pool.Query(context.Background(),
+		"SELECT id, author_id, text FROM messages WHERE author_id=$1 AND receiver_id=$2", req.SenderId, req.ReceiverId)
+	var resp msg_pb.AllMessagesResponse
+	for rows.Next() {
+		var msg msg_pb.MsgResponse
+		rows.Scan(&msg.Id, &msg.AuthorId, &msg.Text)
+		resp.Messages = append(resp.Messages, &msg)
+	}
+	return &resp, err
 }
 
 func (db Database) GetAllPlans(user_id int) (*plan_pb.Agenda, error) {
