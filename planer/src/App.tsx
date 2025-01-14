@@ -20,6 +20,7 @@ const id: number =
 export const IdContext: React.Context<number> = createContext(id);
 
 import { Plans } from './Plan'
+import { Messenger } from './Message';
 
 function AppState(): ReactNode {
     return (
@@ -41,6 +42,7 @@ export default function App() {
         <div className="wrapper">
             <Navbar />
             <Plans />
+            <Messenger />
         </div>
     )
 };
