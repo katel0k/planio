@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -85,9 +86,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if errors.Is(err, lib.ErrNotFound) {
-			log.Default().Printf("creating new user %s", joinReq.Username)
 			id, err = r.Context().Value(DB).(lib.Database).CreateNewUser(joinReq.Username)
-			log.Default().Print(err)
 			if err != nil {
 				return
 			}
@@ -101,7 +100,6 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 	onlineUsers.Lock()
 	onlineUsers.body[id] = make(chan *msgPB.MsgResponse)
 	onlineUsers.Unlock()
-	log.Default().Printf("Got join request for %d", id)
 	if r.Context().Value(USE_COOKIES).(bool) {
 		cookie := http.Cookie{
 			Name:   "id",
@@ -138,7 +136,6 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		go (func() {
 			user <- &response
 		})()
-		log.Default().Printf("Sent message %s", msg.Text)
 	}
 	onlineUsers.RUnlock()
 }
@@ -220,6 +217,7 @@ func main() {
 	onlineUsers := onlineUsers{
 		body: make(map[int]chan *msgPB.MsgResponse),
 	}
+	logger := lib.Logging(log.New(os.Stdout, "", log.LstdFlags))
 
 	s := &http.Server{
 		Addr: fmt.Sprintf(":%d", *serverPort),
@@ -229,16 +227,17 @@ func main() {
 			ctx = context.WithValue(ctx, USE_COOKIES, *useCookies)
 			return ctx
 		},
+		Handler: logger(cors(http.DefaultServeMux)),
 	}
-	http.Handle("/join", cors(http.HandlerFunc(joinHandler)))
-	http.Handle("/ping", cors(http.HandlerFunc(pingHandler)))
-	http.Handle("/message", cors(http.HandlerFunc(messageHandler)))
+	http.HandleFunc("/join", joinHandler)
+	http.HandleFunc("/ping", pingHandler)
+	http.HandleFunc("/message", messageHandler)
 
-	http.Handle("/online", cors(http.HandlerFunc(onlineUsersHandler)))
+	http.HandleFunc("/online", onlineUsersHandler)
 
-	http.Handle("/plan", cors(http.HandlerFunc(planHandler)))
-	fileServer := http.FileServer(http.Dir(*staticDir))
-	http.Handle("/", cors(fileServer))
+	http.HandleFunc("/plan", planHandler)
+
+	http.Handle("/", http.FileServer(http.Dir(*staticDir)))
 
 	log.Fatal(s.ListenAndServe())
 }
