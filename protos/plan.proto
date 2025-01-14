@@ -6,9 +6,18 @@ option go_package = "plan/";
 
 package plan;
 
-message PlanRequest {
+message NewPlanRequest {
     string synopsis = 1;
     optional string description = 2;
+}
+
+message DeletePlanRequest {
+    int32 id = 1;
+}
+
+message ChangePlanRequest {
+    int32 id = 1;
+    optional string synopsis = 2;
 }
 
 message Plan {

@@ -170,13 +170,39 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		defer r.Body.Close()
 		id, _ := getId(r)
-		var planReq planPB.PlanRequest
+		var planReq planPB.NewPlanRequest
 		if getRequest(r, &planReq) != nil {
 			return
 		}
 		plan, _ := r.Context().Value(DB).(lib.Database).CreateNewPlan(id, &planReq)
 		marsh, _ := proto.Marshal(plan)
 		w.Write(marsh)
+	case "PATCH":
+		defer r.Body.Close()
+		var planReq planPB.ChangePlanRequest
+		if getRequest(r, &planReq) != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		err := r.Context().Value(DB).(lib.Database).ChangePlan(&planReq)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	case "DELETE":
+		defer r.Body.Close()
+		var planReq planPB.DeletePlanRequest
+		if getRequest(r, &planReq) != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		err := r.Context().Value(DB).(lib.Database).DeletePlan(int(planReq.Id))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 	}

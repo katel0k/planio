@@ -83,7 +83,7 @@ func (db Database) GetAllPlans(user_id int) (*plan_pb.Agenda, error) {
 	return &agenda, nil
 }
 
-func (db Database) CreateNewPlan(author_id int, plan *plan_pb.PlanRequest) (*plan_pb.Plan, error) {
+func (db Database) CreateNewPlan(author_id int, plan *plan_pb.NewPlanRequest) (*plan_pb.Plan, error) {
 	row := db.Pool.QueryRow(context.Background(),
 		"INSERT INTO plans(author_id, synopsis) VALUES ($1, $2) RETURNING id, synopsis", author_id, plan.Synopsis)
 	var res plan_pb.Plan
@@ -94,6 +94,11 @@ func (db Database) CreateNewPlan(author_id int, plan *plan_pb.PlanRequest) (*pla
 		return nil, err
 	}
 	return &res, nil
+}
+
+func (db Database) ChangePlan(plan *plan_pb.ChangePlanRequest) error {
+	_, err := db.Pool.Exec(context.Background(), "UPDATE plans SET synopsis=$1 WHERE id=$2", plan.Synopsis, plan.Id)
+	return err
 }
 
 func (db Database) DeletePlan(plan_id int) error {
