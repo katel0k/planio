@@ -1,6 +1,7 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useContext, useState } from 'react';
 import { plan as planPB } from 'plan.proto'
 import "./Plan.module.css"
+import debugContext from 'App/lib/debugContext';
 
 export interface PlanProps {
     synopsis: string,
@@ -12,10 +13,11 @@ export interface PlanProps {
 export default function Plan({ synopsis, id, handleChange, handleDelete }: PlanProps): ReactNode {
     const [synopsisInput, setSynopsisInput] = useState<string>(synopsis);
     const [isEditing, setIsEditing] = useState<boolean>(false);
+    const debug = useContext(debugContext);
 
     return (
         <div styleName="plan">
-            {/* <div styleName="plan-id-wrapper"><span styleName="plan-id">{id}</span></div> */}
+            { debug && <div><span>{id}</span></div> }
             <div styleName="plan__synopsis-wrapper">
                 {isEditing ? 
                     <input styleName="plan__synopsis-editor" type="text"

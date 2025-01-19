@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { join as joinPB } from 'join.proto'
 import './App.module.css'
 import IdContext, { ID_UNSET, getNameCookie } from './lib/api';
+import debugContext from './lib/debugContext';
 import Planer from 'App/components/Planer';
 import Messenger from 'App/components/Messenger';
 import Auth from 'App/components/Auth';
 
 export default function App() {
     const [id, setId] = useState<number>(getNameCookie());
-    
+
     if (id == ID_UNSET) {
         return (
             <Auth handleAuth={
@@ -30,10 +31,12 @@ export default function App() {
     }
     return (
         <IdContext.Provider value={id}>
-            <div className="wrapper">
-                <Planer />
-                <Messenger />
-            </div>
+            <debugContext.Provider value={false}>
+                <div className="wrapper">
+                    <Planer />
+                    <Messenger />
+                </div>
+            </debugContext.Provider>
         </IdContext.Provider>
     )
 };
