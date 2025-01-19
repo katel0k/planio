@@ -4,7 +4,7 @@ const { globSync } = require("glob");
 const protoPath = path.resolve(__dirname, '../protos/');
 
 module.exports = {
-    entry: "./src/index.tsx",
+    entry: "index.tsx",
     mode: "development",
     devtool: false,
     output: {
@@ -13,7 +13,7 @@ module.exports = {
     },
     plugins: [
         new HtmlWebpackPlugin({
-            template: "./src/index.html",
+            template: "index.html",
         }),
     ],
     resolve: {
