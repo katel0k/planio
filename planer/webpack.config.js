@@ -6,6 +6,7 @@ const protoPath = path.resolve(__dirname, '../protos/');
 module.exports = {
     entry: "./src/index.tsx",
     mode: "development",
+    devtool: false,
     output: {
         filename: "main.js",
         path: path.resolve(__dirname, "dist"),
@@ -17,7 +18,7 @@ module.exports = {
     ],
     resolve: {
         modules: [__dirname, "src", "node_modules", protoPath, path.join(__dirname, 'node_modules')],
-        extensions: [".*", ".js", ".jsx", ".tsx", ".ts", ".proto"],
+        extensions: [".*", ".js", ".jsx", ".tsx", ".ts", ".proto", ".css", ".module.css"],
     },
     module: {
         rules: [
@@ -29,7 +30,19 @@ module.exports = {
             {
                 test: /\.css$/,
                 exclude: /node_modules/,
-                use: ["style-loader", "css-loader"]
+                use: [
+                    "style-loader",
+                    "@teamsupercell/typings-for-css-modules-loader",
+                    {
+                        loader: "css-loader",
+                        options: {
+                            importLoaders: 1,
+                            modules: {
+                                localIdentName: '[path]__[name]__[local]__[hash:base64:5]'
+                            }
+                        }
+                    },
+                ]
             },
             {
                 test: /\.(png|svg|jpg|gif)$/,

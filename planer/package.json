@@ -13,22 +13,29 @@
         "@babel/preset-env": "7.26.0",
         "@babel/preset-react": "7.26.3",
         "@babel/preset-typescript": "7.26.0",
+        "@teamsupercell/typings-for-css-modules-loader": "^2.5.2",
         "@types/react": "19.0.2",
+        "@types/react-css-modules": "^4.6.8",
         "@types/react-dom": "19.0.2",
         "babel-loader": "9.2.1",
         "css-loader": "7.1.2",
         "file-loader": "6.2.0",
-        "glob": "^11.0.0",
+        "glob": "^11.0.1",
         "html-webpack-plugin": "5.6.3",
         "protobufjs": "^7.4.0",
         "protobufjs-loader": "^3.1.1",
         "protoc-gen-ts": "^0.8.7",
-        "react": "19.0.0",
-        "react-dom": "19.0.0",
         "style-loader": "4.0.0",
+        "typed-css-modules": "^0.9.1",
         "typescript": "5.7.2",
+        "typescript-plugin-css-modules": "^5.1.0",
         "webpack": "5.97.1",
         "webpack-cli": "6.0.1",
         "webpack-dev-server": "5.2.0"
+    },
+    "dependencies": {
+        "@dr.pogodin/babel-plugin-react-css-modules": "^6.13.3",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0"
     }
 }

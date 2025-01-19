@@ -1,7 +1,7 @@
 import { ReactNode, useContext, useEffect, useState } from "react"
 import { join as joinPB } from 'join.proto'
 import { msg as msgPB } from 'msg.proto'
-import { IdContext } from './App'
+import { IdContext } from 'src/App'
 
 interface MessageProps {
     text: string,

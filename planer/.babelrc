@@ -8,5 +8,13 @@
             }
         ],
         "@babel/preset-typescript"
+    ],
+    "plugins": [
+        [
+            "@dr.pogodin/react-css-modules", {
+                "generateScopedName": "[path]__[name]__[local]__[hash:base64:5]",
+                "webpackHotModuleReloading": true
+            }
+        ]
     ]
 }

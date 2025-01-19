@@ -38,6 +38,9 @@
         "paths": {
             "*.proto": ["./src/protos/*.proto"]
         },
+        "plugins": [{
+            "name": "typescript-plugin-css-modules"
+        }]
     },
     "include": [
         "src/**/*"
