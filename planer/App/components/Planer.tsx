@@ -4,21 +4,7 @@ import { makeIdFetch, fetchFunc } from 'App/lib/api';
 import IdContext from 'App/lib/api'
 import './Plan.module.css'
 import Plan from './Plan'
-
-function PlanControls({ handleSubmit }: {
-    handleSubmit: (synopsisValue: string) => void
-}): ReactNode {
-    const [synopsis, setSynopsis] = useState<string>('');
-    return (
-        <div className="plans-controls">
-            <input className="plan-synopsis__text plans-controls__synopsis-input"
-                   type="text" name="synopsis" onChange={e => setSynopsis(e.target.value)} />
-            <input type="button" value="new plan" onClick={
-                () => handleSubmit(synopsis)
-            } />
-        </div>
-    )
-}
+import PlanCreator from './PlanCreator'
 
 export default function Planer(): ReactNode {
     const id = useContext<number>(IdContext);
@@ -94,7 +80,7 @@ export default function Planer(): ReactNode {
 
     return (
         <div className="plans">
-            <PlanControls handleSubmit={makeNewPlan} />
+            <PlanCreator handleSubmit={makeNewPlan} />
             <div className="plans-body-wrapper">
                 <div className="plans-body">
                     {agenda.map((props: planPB.IPlan, index: number) =>

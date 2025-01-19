@@ -1,13 +1,3 @@
-.plans-controls {
-    display: flex;
-    justify-content: space-between;
-}
-
-.plans-controls__synopsis-input {
-    width: minmax(100px, 80%);
-    padding: 10px;
-}
-
 .plans-body {
     display: grid;
     grid-auto-rows: minmax(50px, 1fr);
