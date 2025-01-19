@@ -67,7 +67,7 @@ function UserComponent({user, isChosen, handleClick}: UserProps): ReactNode {
     )
 }
 
-export function Messenger(): ReactNode {
+export default function Messenger(): ReactNode {
     const [chosenUser, setChosenUser] = useState<number | undefined>(0);
     const [userList, setUserList] = useState<joinPB.IUser[]>([]);
 

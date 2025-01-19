@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useState } from 'react'
+import { createContext, useState } from 'react'
 import { join as joinPB } from 'join.proto'
 import "./App.module.css"
 
@@ -13,25 +13,16 @@ function getNameCookie(): number {
     
 export const IdContext: React.Context<number> = createContext(ID_UNSET);
 
-import { Plans } from './components/Plan';
-import { Messenger } from './components/Message';
-
-function AuthComponent({ handleAuth }: { handleAuth: (nickname: string) => void }): ReactNode {
-    const [nickname, setNickname] = useState<string>('');
-    return (
-        <div className="auth">
-            <input type="text" value={nickname} onChange={e => setNickname(e.target.value)} />
-            <input type="submit" onClick={_ => handleAuth(nickname)} />
-        </div>
-    )
-}
+import Plans from './components/Plan';
+import Messenger from './components/Message';
+import Auth from './components/Auth';
 
 export default function App() {
     const [id, setId] = useState<number>(getNameCookie());
     
     if (id == ID_UNSET) {
         return (
-            <AuthComponent handleAuth={
+            <Auth handleAuth={
                 (nickname: string) => 
                     fetch("http://0.0.0.0:5000/join", {
                         method: "POST",

@@ -65,7 +65,7 @@ function PlanControls({ handleSubmit }: {
     )
 }
 
-export function Plans(): ReactNode {
+export default function Plans(): ReactNode {
     const id = useContext<number>(IdContext);
     const f: fetchFunc = makeIdFetch(id);
     const [agenda, setAgenda] = useState<planPB.IPlan[]>([]);
