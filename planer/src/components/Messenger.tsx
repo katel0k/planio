@@ -2,6 +2,8 @@ import { ReactNode, useContext, useEffect, useState } from "react"
 import { join as joinPB } from 'join.proto'
 import { msg as msgPB } from 'msg.proto'
 import { IdContext } from 'src/App'
+import User from 'src/components/User';
+import "./Messenger.module.css"
 
 interface MessageProps {
     text: string,
@@ -52,21 +54,6 @@ function Messages({ user }: {user: joinPB.IUser | undefined}): ReactNode {
     )
 }
 
-interface UserProps {
-    user: joinPB.IUser,
-    isChosen: boolean,
-    handleClick: (id: number | undefined) => void
-}
-
-function UserComponent({user, isChosen, handleClick}: UserProps): ReactNode {
-    return (
-        <div className={"user" + (isChosen ? " user_chosen" : "")} onClick={_ => handleClick(user.id ?? undefined)}>
-            <span className="user-name">{user.username}</span>
-            <span className="user-id">{user.id}</span>
-        </div>
-    )
-}
-
 export default function Messenger(): ReactNode {
     const [chosenUser, setChosenUser] = useState<number | undefined>(0);
     const [userList, setUserList] = useState<joinPB.IUser[]>([]);
@@ -93,7 +80,7 @@ export default function Messenger(): ReactNode {
         <div className="messenger">
             <div className="user-list">
                 {userList.map((a: joinPB.IUser, i: number) => 
-                    <UserComponent user={a} isChosen={chosenUser == i} handleClick={handleUserChoosing} key={i} />
+                    <User user={a} isChosen={chosenUser == i} handleClick={handleUserChoosing} key={i} />
                     )}
             </div>
             <Messages user={chosenUser ? userList[chosenUser] : undefined} />

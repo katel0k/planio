@@ -1,6 +1,6 @@
 import { createContext, useState } from 'react'
 import { join as joinPB } from 'join.proto'
-import "./App.module.css"
+import './App.module.css'
 
 const NAME_COOKIE_KEY: string = 'name';
 const ID_UNSET: number = -1;
@@ -10,12 +10,12 @@ function getNameCookie(): number {
     ));
     return matches ? parseInt(decodeURIComponent(matches[1])) : ID_UNSET;
 }
-    
+
 export const IdContext: React.Context<number> = createContext(ID_UNSET);
 
-import Plans from './components/Plan';
-import Messenger from './components/Message';
-import Auth from './components/Auth';
+import Plans from 'src/components/Plan';
+import Messenger from 'src/components/Messenger';
+import Auth from 'src/components/Auth';
 
 export default function App() {
     const [id, setId] = useState<number>(getNameCookie());

@@ -1,4 +1,5 @@
 import { ReactNode, useState } from "react";
+import "./Auth.module.css"
 
 export default function Auth({ handleAuth }: { handleAuth: (nickname: string) => void }): ReactNode {
     const [nickname, setNickname] = useState<string>('');

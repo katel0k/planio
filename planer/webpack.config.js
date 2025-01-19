@@ -17,8 +17,8 @@ module.exports = {
         }),
     ],
     resolve: {
-        modules: [__dirname, "src", "node_modules", protoPath, path.join(__dirname, 'node_modules')],
-        extensions: [".*", ".js", ".jsx", ".tsx", ".ts", ".proto", ".css", ".module.css"],
+        modules: [__dirname, "src", protoPath, "node_modules", path.resolve(__dirname, "./node_modules")],
+        extensions: [".js", ".jsx", ".tsx", ".ts", ".proto", ".module.css", ".css", "..."],
     },
     module: {
         rules: [
