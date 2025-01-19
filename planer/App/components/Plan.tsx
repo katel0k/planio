@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useContext } from 'react';
 import { plan as planPB } from 'plan.proto'
-import { makeIdFetch, fetchFunc } from 'src/lib/serv';
-import { IdContext } from 'src/App'
+import { makeIdFetch, fetchFunc } from 'App/lib/serv';
+import { IdContext } from 'App/App'
 import './Plan.module.css'
 
 interface PlanProps {

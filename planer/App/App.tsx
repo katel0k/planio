@@ -13,9 +13,9 @@ function getNameCookie(): number {
 
 export const IdContext: React.Context<number> = createContext(ID_UNSET);
 
-import Plans from 'src/components/Plan';
-import Messenger from 'src/components/Messenger';
-import Auth from 'src/components/Auth';
+import Plans from 'App/components/Plan';
+import Messenger from 'App/components/Messenger';
+import Auth from 'App/components/Auth';
 
 export default function App() {
     const [id, setId] = useState<number>(getNameCookie());

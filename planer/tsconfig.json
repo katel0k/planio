@@ -24,10 +24,10 @@
         "useUnknownInCatchVariables": true,
         // Modules Configuration
         "baseUrl": "./",
-        "module": "ES2022",
-        "moduleResolution": "node",
+        "module": "Node16",
+        "moduleResolution": "node16",
         // Language and Environment Configuration
-        "target": "ES2022",
+        "target": "ES2024",
         "jsx": "react-jsx",
         // JavaScript Support Configuration
         "allowJs": true,
@@ -36,14 +36,14 @@
         "esModuleInterop": true,
         "isolatedModules": true,
         "paths": {
-            "*.proto": ["./src/protos/*.proto"]
+            "*.proto": ["./App/protos/*.proto"]
         },
         "plugins": [{
             "name": "typescript-plugin-css-modules"
         }]
     },
     "include": [
-        "src/**/*"
+        "App/**/*"
     ],
     "exclude": [
         "node_modules"

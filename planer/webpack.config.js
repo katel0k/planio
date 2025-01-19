@@ -17,7 +17,7 @@ module.exports = {
         }),
     ],
     resolve: {
-        modules: [__dirname, "src", protoPath, "node_modules", path.resolve(__dirname, "./node_modules")],
+        modules: [__dirname, protoPath, "App", "node_modules", path.resolve(__dirname, "./node_modules")],
         extensions: [".js", ".jsx", ".tsx", ".ts", ".proto", ".module.css", ".css", "..."],
     },
     module: {
@@ -59,7 +59,7 @@ module.exports = {
                         pbjsArgs: [],
                         pbts: {
                             output: protobufFile =>
-                                path.join(__dirname, './src/protos/', path.basename(protobufFile) + '.d.ts')
+                                path.join(__dirname, './App/protos/', path.basename(protobufFile) + '.d.ts')
                         },
                         target: 'static-module',
                     },
