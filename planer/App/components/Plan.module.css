@@ -1,9 +1,35 @@
-.plan-wrapper {
-    border-bottom: 2px solid silver;
+.plan {
+    display: flex;
+    justify-content: space-between;
     padding: 5px;
 }
 
-.plan {
+.plan__synopsis-wrapper {
+    max-width: 50%;
+}
+
+.plan__synopsis-editor {
+    outline: none;
+    font-size: 1.2em;
+}
+
+.plan__synopsis {
+    font-size: 1.2em;
+}
+
+.plan__settings {
     display: flex;
-    justify-content: left;
+    justify-content: space-around;
+    width: 30%;
+}
+
+.plan__settings-change {
+    color: green;
+    width: 50px;
+    text-align: center;
+    box-sizing: content-box;
+}
+
+.plan__settings-delete {
+    color: red;
 }
