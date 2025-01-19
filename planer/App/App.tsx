@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { join as joinPB } from 'join.proto'
 import './App.module.css'
 import IdContext, { ID_UNSET, getNameCookie } from './lib/api';
-import Plans from 'App/components/Plan';
+import Planer from 'App/components/Planer';
 import Messenger from 'App/components/Messenger';
 import Auth from 'App/components/Auth';
 
@@ -31,7 +31,7 @@ export default function App() {
     return (
         <IdContext.Provider value={id}>
             <div className="wrapper">
-                <Plans />
+                <Planer />
                 <Messenger />
             </div>
         </IdContext.Provider>
