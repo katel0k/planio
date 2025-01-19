@@ -13,15 +13,3 @@
     grid-auto-rows: minmax(50px, 1fr);
     gap: 2px 0;
 }
-
-.plan-wrapper {
-    border-bottom: 2px solid silver;
-    padding: 5px;
-}
-
-.plan {
-    display: flex;
-    justify-content: left;
-}
-
-
