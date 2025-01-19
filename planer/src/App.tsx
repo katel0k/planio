@@ -31,7 +31,7 @@ export default function App() {
     if (id == ID_UNSET) {
         return (
             <AuthComponent handleAuth={
-                (nickname: string) => {
+                (nickname: string) => 
                     fetch("http://0.0.0.0:5000/join", {
                         method: "POST",
                         headers: {
@@ -41,13 +41,9 @@ export default function App() {
                             username: nickname
                         }).toJSON()),
                     })
-                        .then((response: Response) => response.arrayBuffer())
-                        .then((buffer: ArrayBuffer) => joinPB.JoinResponse.decode(new Uint8Array(buffer)))
-                        .then((res: joinPB.JoinResponse) =>{
-                            console.log(res);
-                            setId(res.id)
-                        })
-                }
+                    .then((response: Response) => response.arrayBuffer())
+                    .then((buffer: ArrayBuffer) => joinPB.JoinResponse.decode(new Uint8Array(buffer)))
+                    .then((res: joinPB.JoinResponse) =>setId(res.id))
             } />
         )
     }
