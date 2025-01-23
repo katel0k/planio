@@ -9,6 +9,9 @@ package plan;
 message NewPlanRequest {
     string synopsis = 1;
     optional string description = 2;
+    optional google.protobuf.Timestamp creation_time = 3;
+    optional int32 parent = 4;
+    optional TimeScale scale = 5;
 }
 
 message DeletePlanRequest {
@@ -18,6 +21,21 @@ message DeletePlanRequest {
 message ChangePlanRequest {
     int32 id = 1;
     optional string synopsis = 2;
+    optional string description = 3;
+    optional google.protobuf.Timestamp creation_time = 4;
+    optional int32 parent = 5;
+    optional TimeScale scale = 6;
+}
+
+enum TimeScale {
+    undefined = 0;
+    year = 1;
+    month = 2;
+    week = 3;
+    day = 4;
+    hour = 5;
+    unknown = 6;
+    reserved 7;
 }
 
 message Plan {
@@ -26,6 +44,8 @@ message Plan {
     optional string description = 3;
 
     optional google.protobuf.Timestamp creation_time = 4;
+    optional int32 parent = 5;
+    TimeScale scale = 6;
 }
 
 message Agenda {
