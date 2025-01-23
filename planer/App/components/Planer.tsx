@@ -8,12 +8,11 @@ import PlanCreator from './PlanCreator'
 export default function Planer(): ReactNode {
     const id = useContext<number>(IdContext);
     const { getPlans, createPlan, changePlan, deletePlan } = apiFactory(id);
-    const [agenda, setAgenda] = useState<planPB.IPlan[]>([]);
+    const [agenda, setAgenda] = useState<planPB.Plan[]>([]);
     useEffect(() => {
         const controller = new AbortController()
-        const signal = controller.signal
-        getPlans({ signal })
-            .then((res: planPB.Agenda) => setAgenda(res.plans));
+        getPlans({ signal: controller.signal })
+            .then((res: planPB.Agenda) => setAgenda(res.plans.map((a: planPB.IPlan) => new planPB.Plan(a))));
         return () => { controller.abort("Use effect cancelled") }
     }, []);
 
@@ -26,7 +25,7 @@ export default function Planer(): ReactNode {
     const handleChangePlan: (change: planPB.ChangePlanRequest) => void = (change) => {
         changePlan(change)
             .then((res: planPB.Plan) => setAgenda(
-                agenda.map((a: planPB.IPlan) => a.id == res.id ? res : a)
+                agenda.map((a: planPB.Plan) => a.id == res.id ? res : a)
             ))
             .catch(_ => {});
     }
@@ -34,22 +33,21 @@ export default function Planer(): ReactNode {
     const handleDeletePlan: (del: planPB.DeletePlanRequest) => void = (del) => {
         deletePlan(del)
             .then((res: planPB.Plan) => setAgenda(
-                agenda.filter((a: planPB.IPlan) => a.id != res.id)
+                agenda.filter((a: planPB.Plan) => a.id != res.id)
             ))
             .catch(_ => agenda);
     }
 
     return (
-        <div styleName="plans">
+        <div styleName="planer">
             <PlanCreator handleSubmit={handleCreatePlan} />
-            <div styleName="plans-body">
-                {agenda.map((props: planPB.IPlan, index: number) =>
+            <div styleName="planer__plans">
+                {agenda.map((plan: planPB.Plan) =>
                     <Plan
-                        synopsis={props.synopsis ?? ''}
+                        plan={plan}
                         handleChange={handleChangePlan}
                         handleDelete={handleDeletePlan}
-                        id={props.id ?? 0}
-                        key={index} />
+                        key={plan.id} />
                 )}
             </div>
         </div>

@@ -1,10 +1,10 @@
-.plans-body {
+.planer__plans {
     display: grid;
     grid-auto-rows: minmax(50px, 1fr);
     gap: 2px 0;
 }
 
-.plans {
+.planer {
     padding: 0 25%;
     max-width: 200px;   
 }

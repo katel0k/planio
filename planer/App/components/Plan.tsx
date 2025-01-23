@@ -4,25 +4,24 @@ import "./Plan.module.css"
 import debugContext from 'App/lib/debugContext';
 
 export interface PlanProps {
-    synopsis: string,
-    id: number,
+    plan: planPB.Plan,
     handleDelete: (plan: planPB.DeletePlanRequest) => void,
     handleChange: (plan: planPB.ChangePlanRequest) => void
 }
 
-export default function Plan({ synopsis, id, handleChange, handleDelete }: PlanProps): ReactNode {
-    const [synopsisInput, setSynopsisInput] = useState<string>(synopsis);
+export default function Plan({ plan, handleChange, handleDelete }: PlanProps): ReactNode {
+    const [synopsis, setSynopsis] = useState<string>(plan.synopsis);
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const debug = useContext(debugContext);
 
     return (
         <div styleName="plan">
-            { debug && <div><span>{id}</span></div> }
+            { debug && <div><span>{plan.id}</span></div> }
             <div styleName="plan__synopsis-wrapper">
                 {isEditing ? 
                     <input styleName="plan__synopsis-editor" type="text"
-                        value={synopsisInput}
-                        onChange={e => setSynopsisInput(e.target.value)}
+                        value={synopsis}
+                        onChange={e => setSynopsis(e.target.value)}
                         name="plan__synopsis-editor" /> :
                     <span styleName="plan__synopsis">{synopsis}</span>}
             </div>
@@ -31,8 +30,8 @@ export default function Plan({ synopsis, id, handleChange, handleDelete }: PlanP
                     onClick={_ => {
                         if (isEditing) {
                             handleChange(planPB.ChangePlanRequest.create({
-                                id,
-                                synopsis: synopsisInput
+                                id: plan.id,
+                                synopsis
                             }));
                             setIsEditing(false);
                         } else {
@@ -40,7 +39,7 @@ export default function Plan({ synopsis, id, handleChange, handleDelete }: PlanP
                         }
                     }}>{isEditing ? 'save' : 'edit'}</button>
                 <button styleName="plan__settings-delete" onClick={_ => 
-                    handleDelete(planPB.DeletePlanRequest.create({id}))}>delete</button>
+                    handleDelete(planPB.DeletePlanRequest.create({id: plan.id}))}>delete</button>
             </div>
         </div>
     )
