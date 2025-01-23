@@ -3,3 +3,8 @@
     grid-auto-rows: minmax(50px, 1fr);
     gap: 2px 0;
 }
+
+.plans {
+    padding: 0 25%;
+    max-width: 200px;   
+}

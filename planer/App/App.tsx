@@ -32,10 +32,8 @@ export default function App() {
     return (
         <IdContext.Provider value={id}>
             <debugContext.Provider value={false}>
-                <div className="wrapper">
-                    <Planer />
-                    <Messenger />
-                </div>
+                <Planer />
+                <Messenger />
             </debugContext.Provider>
         </IdContext.Provider>
     )

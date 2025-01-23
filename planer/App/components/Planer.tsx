@@ -40,19 +40,17 @@ export default function Planer(): ReactNode {
     }
 
     return (
-        <div className="plans">
+        <div styleName="plans">
             <PlanCreator handleSubmit={handleCreatePlan} />
-            <div className="plans-body-wrapper">
-                <div className="plans-body">
-                    {agenda.map((props: planPB.IPlan, index: number) =>
-                        <Plan
-                            synopsis={props.synopsis ?? ''}
-                            handleChange={handleChangePlan}
-                            handleDelete={handleDeletePlan}
-                            id={props.id ?? 0}
-                            key={index} />
-                    )}
-                </div>
+            <div styleName="plans-body">
+                {agenda.map((props: planPB.IPlan, index: number) =>
+                    <Plan
+                        synopsis={props.synopsis ?? ''}
+                        handleChange={handleChangePlan}
+                        handleDelete={handleDeletePlan}
+                        id={props.id ?? 0}
+                        key={index} />
+                )}
             </div>
         </div>
     )
