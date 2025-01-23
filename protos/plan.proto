@@ -9,9 +9,8 @@ package plan;
 message NewPlanRequest {
     string synopsis = 1;
     optional string description = 2;
-    optional google.protobuf.Timestamp creation_time = 3;
-    optional int32 parent = 4;
-    optional TimeScale scale = 5;
+    optional int32 parent = 3;
+    optional TimeScale scale = 4;
 }
 
 message DeletePlanRequest {
