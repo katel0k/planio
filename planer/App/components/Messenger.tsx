@@ -1,7 +1,7 @@
 import { ReactNode, useContext, useEffect, useState } from "react"
 import { join as joinPB } from 'join.proto'
 import { msg as msgPB } from 'msg.proto'
-import IdContext from 'App/lib/api'
+import { IdContext, serverUrl } from 'App/lib/api'
 import User from 'App/components/User';
 import "./Messenger.module.css"
 
@@ -27,7 +27,7 @@ function Messages({ user }: {user: joinPB.IUser | undefined}): ReactNode {
     useEffect(() => {
         const controller = new AbortController()
         const signal = controller.signal
-        fetch("http://localhost:5000/messages", {
+        fetch(new URL("/messages", serverUrl), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json;charset=utf-8'
@@ -61,7 +61,7 @@ export default function Messenger(): ReactNode {
     useEffect(() => {
         const controller = new AbortController()
         const signal = controller.signal
-        fetch("http://localhost:5000/join", {
+        fetch(new URL("/join", serverUrl), {
             method: 'GET',
             signal
         })

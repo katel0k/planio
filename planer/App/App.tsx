@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { join as joinPB } from 'join.proto'
 import './App.module.css'
-import IdContext, { ID_UNSET, getNameCookie } from './lib/api';
+import { IdContext, ID_UNSET, getNameCookie, serverUrl } from './lib/api';
 import debugContext from './lib/debugContext';
 import Planer from 'App/components/Planer';
 import Messenger from 'App/components/Messenger';
@@ -13,14 +13,14 @@ export default function App() {
     if (id == ID_UNSET) {
         return (
             <Auth handleAuth={
-                (nickname: string) => 
-                    fetch("http://0.0.0.0:5000/join", {
+                (username: string) => 
+                    fetch(new URL("/join", serverUrl), {
                         method: "POST",
                         headers: {
                             'Content-Type': 'application/json;charset=utf-8'
                         },
                         body: JSON.stringify(joinPB.JoinRequest.create({
-                            username: nickname
+                            username
                         }).toJSON()),
                     })
                     .then((response: Response) => response.arrayBuffer())
