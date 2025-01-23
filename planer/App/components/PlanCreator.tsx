@@ -1,8 +1,9 @@
 import { ReactNode, useState } from "react";
 import "./PlanCreator.module.css"
 
-export default function PlanCreator({ handleSubmit }: {
-    handleSubmit: (synopsisValue: string) => void
+export default function PlanCreator({ handleSubmit, handleCancel }: {
+    handleSubmit: (synopsisValue: string) => void,
+    handleCancel: () => void
 }): ReactNode {
     const [synopsis, setSynopsis] = useState<string>('');
     return (
@@ -12,6 +13,7 @@ export default function PlanCreator({ handleSubmit }: {
             <input type="button" value="new plan" onClick={
                 () => handleSubmit(synopsis)
             } />
+            <input type="button" value="cancel" onClick={handleCancel} />
         </div>
     )
 }

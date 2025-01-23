@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useContext } from 'react';
 import { plan as planPB } from 'plan.proto'
 import { apiFactory, IdContext } from 'App/lib/api';
-import './Plan.module.css'
+import './Planer.module.css'
 import Plan from './Plan'
 import PlanCreator from './PlanCreator'
 
@@ -9,6 +9,7 @@ export default function Planer(): ReactNode {
     const id = useContext<number>(IdContext);
     const { getPlans, createPlan, changePlan, deletePlan } = apiFactory(id);
     const [agenda, setAgenda] = useState<planPB.Plan[]>([]);
+    const [isPlanCreating, setIsPlanCreating] = useState<boolean>(false);
     useEffect(() => {
         const controller = new AbortController()
         getPlans({ signal: controller.signal })
@@ -40,7 +41,11 @@ export default function Planer(): ReactNode {
 
     return (
         <div styleName="planer">
-            <PlanCreator handleSubmit={handleCreatePlan} />
+            {
+                isPlanCreating ?
+                    <PlanCreator handleSubmit={handleCreatePlan} handleCancel={() => setIsPlanCreating(false)} /> :
+                    <button onClick={_ => setIsPlanCreating(true)}>Create new plan</button>
+            }
             <div styleName="planer__plans">
                 {agenda.map((plan: planPB.Plan) =>
                     <Plan
