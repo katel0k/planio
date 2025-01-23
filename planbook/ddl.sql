@@ -5,15 +5,36 @@ CREATE TABLE users (
     nickname VARCHAR(32) NOT NULL UNIQUE
 );
 
+CREATE TYPE time_scale AS ENUM ('undefined', 'year', 'month', 'week', 'day', 'hour');
+
 CREATE TABLE plans (
     id SERIAL PRIMARY KEY,
     author_id INTEGER NOT NULL,
     synopsis VARCHAR(128) NOT NULL,
-    creation_dttm TIMESTAMP DEFAULT NOW()::TIMESTAMP
+    creation_dttm TIMESTAMP DEFAULT NOW()::TIMESTAMP,
+    parent_id INTEGER DEFAULT NULL,
+    scale time_scale DEFAULT 'undefined'
 );
 
 ALTER TABLE plans ADD CONSTRAINT FK_users_plans FOREIGN KEY
     (author_id) REFERENCES users(id);
+
+ALTER TABLE plans ADD CONSTRAINT FK_parent_plan FOREIGN KEY
+    (parent_id) REFERENCES plans(id);
+
+CREATE FUNCTION trigger_create_root_plan_for_user()
+    RETURNS TRIGGER
+AS $$
+BEGIN
+    INSERT INTO plans (author_id, synopsis, parent_id, scale) VALUES
+        (NEW.id, '', NULL, 'undefined');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER null_plan AFTER INSERT ON users
+    FOR EACH ROW
+    EXECUTE PROCEDURE trigger_create_root_plan_for_user();
 
 CREATE TABLE descriptions (
     plan_id INTEGER PRIMARY KEY,
@@ -35,5 +56,12 @@ ALTER TABLE messages ADD CONSTRAINT FK_users_messages FOREIGN KEY
     (author_id) REFERENCES users(id);
 ALTER TABLE messages ADD CONSTRAINT FK_messages_to_user FOREIGN KEY
     (receiver_id) REFERENCES users(id);
+
+CREATE VIEW user_plans_roots
+AS (
+    SELECT author_id AS user_id, id AS plan_id
+    FROM plans
+    WHERE scale='undefined' AND parent_id IS NULL
+);
 
 COMMIT;
