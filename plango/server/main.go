@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -16,6 +15,7 @@ import (
 	"time"
 
 	"github.com/katel0k/planio/server/lib"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	joinPB "github.com/katel0k/planio/server/build/join"
@@ -78,11 +78,11 @@ func getId(r *http.Request) (int, error) {
 func getRequest(r *http.Request, m proto.Message) error {
 	var err error
 	headerContentType := r.Header.Get("Content-Type")
+	buffer := make([]byte, 1024)
+	n, _ := r.Body.Read(buffer)
 	if strings.Contains(headerContentType, "application/json") {
-		err = json.NewDecoder(r.Body).Decode(m)
+		err = protojson.Unmarshal(buffer[0:n], m)
 	} else {
-		buffer := make([]byte, 1024)
-		n, _ := r.Body.Read(buffer)
 		err = proto.Unmarshal(buffer[0:n], m)
 	}
 	return err
@@ -197,7 +197,8 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		id, _ := getId(r)
 		var planReq planPB.NewPlanRequest
-		if getRequest(r, &planReq) != nil {
+		if err := getRequest(r, &planReq); err != nil {
+			log.Default().Print(err)
 			return
 		}
 		plan, _ := r.Context().Value(DB).(lib.Database).CreateNewPlan(id, &planReq)
