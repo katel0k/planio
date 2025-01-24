@@ -33,7 +33,7 @@ export const serverUrl: URL = new URL("http://0.0.0.0:5000");
 
 export function apiFactory(id: number): {
     getPlans: (options?: RequestInit) => Promise<planPB.Agenda>,
-    createPlan: (synopsis: string, options?: RequestInit) => Promise<planPB.Plan>,
+    createPlan: (synopsis: string, options?: RequestInit) => Promise<planPB.Plan[]>,
     changePlan: (change: planPB.ChangePlanRequest, options?: RequestInit) => Promise<planPB.Plan>,
     deletePlan: (del: planPB.DeletePlanRequest, options?: RequestInit) => Promise<planPB.Plan>
 } {
@@ -45,9 +45,10 @@ export function apiFactory(id: number): {
             const buffer = await response.arrayBuffer();
             return planPB.Agenda.decode(new Uint8Array(buffer));
         },
-        async createPlan(synopsis: string, options?: RequestInit): Promise<planPB.Plan> {
+        async createPlan(synopsis: string, options?: RequestInit): Promise<planPB.Plan[]> {
             const plan = planPB.Plan.create({
-                synopsis
+                synopsis,
+                scale: planPB.TimeScale.undefined
             });
             const response = await f(url, {
                 method: 'POST',
@@ -58,7 +59,8 @@ export function apiFactory(id: number): {
                 ...options,
             });
             const buffer = await response.arrayBuffer();
-            return planPB.Plan.decode(new Uint8Array(buffer));
+            const agenda = planPB.Agenda.decode(new Uint8Array(buffer));
+            return agenda.plans.map(planPB.Plan.create);
         },
         async changePlan(change: planPB.ChangePlanRequest, options?: RequestInit): Promise<planPB.Plan> {
             const response = await f(url, {

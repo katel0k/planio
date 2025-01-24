@@ -19,7 +19,7 @@ export default function Planer(): ReactNode {
 
     const handleCreatePlan: (synopsis: string) => void = (synopsis) => {
         createPlan(synopsis)
-            .then((res: planPB.Plan) => setAgenda([res, ...agenda]))
+            .then(setAgenda)
             .catch(_ => {});
     }
 
