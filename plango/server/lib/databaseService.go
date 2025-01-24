@@ -5,10 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	msg_pb "github.com/katel0k/planio/server/build/msg"
 	plan_pb "github.com/katel0k/planio/server/build/plan"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Database struct {
@@ -20,6 +23,16 @@ func ConnectDB(port int) *pgxpool.Pool {
 	config, err := pgxpool.ParseConfig(url)
 	if err != nil {
 		log.Fatalf("Unable to parse DB config: %v\n", err)
+	}
+
+	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		dataType, err := conn.LoadType(context.Background(), "time_scale")
+		if err != nil {
+			return err
+		}
+		conn.TypeMap().RegisterType(dataType)
+
+		return nil
 	}
 
 	dbpool, err := pgxpool.NewWithConfig(context.Background(), config)
@@ -82,7 +95,7 @@ func (db Database) GetAllMessages(req *msg_pb.AllMessagesRequest) (*msg_pb.AllMe
 
 func (db Database) GetAllPlans(user_id int) (*plan_pb.Agenda, error) {
 	rows, err := db.Pool.Query(context.Background(),
-		"SELECT id, synopsis FROM plans WHERE author_id=$1", user_id)
+		"SELECT id, synopsis FROM plans WHERE author_id=$1 AND parent_id IS NOT NULL", user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -98,9 +111,15 @@ func (db Database) GetAllPlans(user_id int) (*plan_pb.Agenda, error) {
 
 func (db Database) CreateNewPlan(author_id int, plan *plan_pb.NewPlanRequest) (*plan_pb.Plan, error) {
 	row := db.Pool.QueryRow(context.Background(),
-		"INSERT INTO plans(author_id, synopsis) VALUES ($1, $2) RETURNING id, synopsis", author_id, plan.Synopsis)
+		`INSERT INTO plans(author_id, synopsis, parent_id, scale) VALUES ($1, $2, $3, $4)
+		RETURNING id, synopsis, creation_dttm, parent_id, scale`,
+		author_id, plan.Synopsis, plan.Parent, plan.Scale)
 	var res plan_pb.Plan
-	err := row.Scan(&res.Id, &res.Synopsis)
+	var creationTime time.Time
+	var scale string
+	err := row.Scan(&res.Id, &res.Synopsis, &creationTime, &res.Parent, &scale)
+	res.CreationTime = timestamppb.New(creationTime)
+	res.Scale = plan_pb.TimeScale(plan_pb.TimeScale_value[scale])
 	if err != nil {
 		log.Default().Print(err)
 		log.Default().Printf("Failed to add message in database")
