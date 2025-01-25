@@ -1,9 +1,42 @@
-.plans-controls {
+.plan-creator {
     display: flex;
     justify-content: space-between;
+    flex-direction: column;
+    gap: .2em;
+    padding: .5em;
+    box-sizing: border-box;
+    border: 2px lightgrey solid;
+    border-radius: .2em;
 }
 
-.plans-controls__synopsis-input {
-    width: minmax(100px, 80%);
-    padding: 10px;
+.plan-creator__synopsis {
+    content: "Synopsis";
+    color: grey;
+}
+
+.plan-creator__description {
+    content: "Description";
+    color: grey;
+}
+
+.plan-creator__submit {
+    color: green;
+}
+
+.plan-creator__cancel {
+    color: red;
+}
+
+.plan-creator__scale {
+    width: 100%;
+}
+
+.plan-creator__time {
+    font-size: 0.8em;
+}
+
+.plan-creator__controls {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
 }

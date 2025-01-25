@@ -17,8 +17,8 @@ export default function Planer(): ReactNode {
         return () => { controller.abort("Use effect cancelled") }
     }, []);
 
-    const handleCreatePlan: (synopsis: string) => void = (synopsis) => {
-        createPlan(synopsis)
+    const handleCreatePlan: (plan: planPB.NewPlanRequest) => void = (plan) => {
+        createPlan(plan)
             .then(setAgenda)
             .catch(_ => {});
     }

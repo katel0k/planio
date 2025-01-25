@@ -33,7 +33,7 @@ export const serverUrl: URL = new URL("http://0.0.0.0:5000");
 
 export function apiFactory(id: number): {
     getPlans: (options?: RequestInit) => Promise<planPB.Agenda>,
-    createPlan: (synopsis: string, options?: RequestInit) => Promise<planPB.Plan[]>,
+    createPlan: (plan: planPB.NewPlanRequest, options?: RequestInit) => Promise<planPB.Plan[]>,
     changePlan: (change: planPB.ChangePlanRequest, options?: RequestInit) => Promise<planPB.Plan>,
     deletePlan: (del: planPB.DeletePlanRequest, options?: RequestInit) => Promise<planPB.Plan>
 } {
@@ -45,11 +45,7 @@ export function apiFactory(id: number): {
             const buffer = await response.arrayBuffer();
             return planPB.Agenda.decode(new Uint8Array(buffer));
         },
-        async createPlan(synopsis: string, options?: RequestInit): Promise<planPB.Plan[]> {
-            const plan = planPB.Plan.create({
-                synopsis,
-                scale: planPB.TimeScale.undefined
-            });
+        async createPlan(plan: planPB.NewPlanRequest, options?: RequestInit): Promise<planPB.Plan[]> {
             const response = await f(url, {
                 method: 'POST',
                 headers: {
