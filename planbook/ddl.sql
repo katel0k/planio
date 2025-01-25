@@ -22,20 +22,6 @@ ALTER TABLE plans ADD CONSTRAINT FK_users_plans FOREIGN KEY
 ALTER TABLE plans ADD CONSTRAINT FK_parent_plan FOREIGN KEY
     (parent_id) REFERENCES plans(id);
 
-CREATE FUNCTION trigger_create_root_plan_for_user()
-    RETURNS TRIGGER
-AS $$
-BEGIN
-    INSERT INTO plans (author_id, synopsis, parent_id, scale) VALUES
-        (NEW.id, '', NULL, 'undefined');
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER null_plan AFTER INSERT ON users
-    FOR EACH ROW
-    EXECUTE PROCEDURE trigger_create_root_plan_for_user();
-
 CREATE TABLE descriptions (
     plan_id INTEGER PRIMARY KEY,
     body VARCHAR(1024)
