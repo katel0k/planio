@@ -95,7 +95,7 @@ func (db Database) GetAllMessages(req *msg_pb.AllMessagesRequest) (*msg_pb.AllMe
 
 func (db Database) GetAllPlans(user_id int) (*plan_pb.Agenda, error) {
 	rows, err := db.Pool.Query(context.Background(),
-		"SELECT id, synopsis FROM plans WHERE author_id=$1 AND parent_id IS NOT NULL", user_id)
+		"SELECT id, synopsis FROM plans WHERE author_id=$1", user_id)
 	if err != nil {
 		return nil, err
 	}
