@@ -2,6 +2,7 @@ import { ReactNode, useContext, useState } from 'react';
 import { plan as planPB } from 'plan.proto'
 import "./Plan.module.css"
 import debugContext from 'App/lib/debugContext';
+import { convertScaleToString } from 'App/lib/util';
 
 export interface PlanProps {
     plan: planPB.Plan,
@@ -17,13 +18,17 @@ export default function Plan({ plan, handleChange, handleDelete }: PlanProps): R
     return (
         <div styleName="plan">
             { debug && <div><span>{plan.id}</span></div> }
-            <div styleName="plan__synopsis-wrapper">
-                {isEditing ? 
-                    <input styleName="plan__synopsis-editor" type="text"
-                        value={synopsis}
-                        onChange={e => setSynopsis(e.target.value)}
-                        name="plan__synopsis-editor" /> :
-                    <span styleName="plan__synopsis">{synopsis}</span>}
+            <div styleName="plan__info">
+                <div>
+                    {isEditing ? 
+                        <input styleName="plan__synopsis-editor" type="text"
+                            value={synopsis}
+                            onChange={e => setSynopsis(e.target.value)}
+                            name="plan__synopsis-editor" /> :
+                        <span styleName="plan__synopsis">{synopsis}</span>}
+                </div>
+                <div styleName="plan__description">{plan.description ?? ""}</div>
+                <div styleName="plan__time-scale">{convertScaleToString(plan.scale)}</div>
             </div>
             <div styleName="plan__settings">
                 <button styleName="plan__settings-change"

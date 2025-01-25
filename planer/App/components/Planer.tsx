@@ -19,7 +19,7 @@ export default function Planer(): ReactNode {
 
     const handleCreatePlan: (plan: planPB.NewPlanRequest) => void = (plan) => {
         createPlan(plan)
-            .then(setAgenda)
+            .then((res: planPB.Plan) => setAgenda([...agenda, res]))
             .catch(_ => {});
     }
 
@@ -43,7 +43,10 @@ export default function Planer(): ReactNode {
         <div styleName="planer">
             {
                 isPlanCreating ?
-                    <PlanCreator handleSubmit={handleCreatePlan} handleCancel={() => setIsPlanCreating(false)} /> :
+                    <PlanCreator handleSubmit={(request: planPB.NewPlanRequest) => {
+                        handleCreatePlan(request);
+                        setIsPlanCreating(false);
+                    }} handleCancel={() => setIsPlanCreating(false)} /> :
                     <button onClick={_ => setIsPlanCreating(true)}>Create new plan</button>
             }
             <div styleName="planer__plans">
