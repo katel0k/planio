@@ -13,7 +13,8 @@
         [
             "@dr.pogodin/react-css-modules", {
                 "generateScopedName": "[path]__[name]__[local]__[hash:base64:5]",
-                "webpackHotModuleReloading": true
+                "webpackHotModuleReloading": true,
+                "handleMissingStyleName": "warn"
             }
         ]
     ]
