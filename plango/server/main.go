@@ -67,7 +67,7 @@ func getRequest(r *http.Request, m proto.Message) error {
 
 func authHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	var authReq authPB.AuthRequest // TODO: temporary solution, will separate join and auth handlers later
+	var authReq authPB.AuthRequest
 	if getRequest(r, &authReq) != nil {
 		return
 	}
@@ -85,6 +85,8 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			return
 		}
+	} else {
+		success = true
 	}
 
 	if r.Context().Value(USE_COOKIES).(bool) {
