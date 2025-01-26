@@ -1,9 +1,12 @@
-import { ReactNode, useState, useEffect, useContext } from 'react';
+import { ReactNode, useState, useEffect, useContext, createContext } from 'react';
 import { plan as planPB } from 'plan.proto'
 import { APIContext, apiFactory, IdContext } from 'App/lib/api';
 import './Planer.module.css'
 import Plan from './Plan'
 import PlanCreator from './PlanCreator'
+import { convertScaleToString } from 'App/lib/util';
+
+export const ScaleContext = createContext<planPB.TimeScale>(planPB.TimeScale.undefined);
 
 export default function Planer(): ReactNode {
     const id = useContext<number>(IdContext);
@@ -11,6 +14,7 @@ export default function Planer(): ReactNode {
     const { getPlans, createPlan, changePlan, deletePlan } = api;
     const [agenda, setAgenda] = useState<planPB.Plan[]>([]);
     const [isPlanCreating, setIsPlanCreating] = useState<boolean>(false);
+    const [scale, setScale] = useState<planPB.TimeScale>(planPB.TimeScale.undefined);
     useEffect(() => {
         const controller = new AbortController()
         getPlans({ signal: controller.signal })
@@ -42,26 +46,41 @@ export default function Planer(): ReactNode {
     }
 
     return (
-        <div styleName="planer">
-            {
-                isPlanCreating ?
-                    <PlanCreator handleSubmit={(request: planPB.NewPlanRequest) => {
-                        handleCreatePlan(request);
-                        setIsPlanCreating(false);
-                    }} handleCancel={() => setIsPlanCreating(false)} /> :
-                    <button onClick={_ => setIsPlanCreating(true)}>Create new plan</button>
-            }
-            <div styleName="planer__plans">
-                <APIContext.Provider value={api}>
-                    {agenda.map((plan: planPB.Plan) =>
-                        <Plan
-                            plan={plan}
-                            handleChange={handleChangePlan}
-                            handleDelete={handleDeletePlan}
-                            key={plan.id} />
-                    )}
-                </APIContext.Provider>
+        <ScaleContext.Provider value={scale}>
+            <div styleName="planer">
+                {
+                    isPlanCreating ?
+                        <PlanCreator handleSubmit={(request: planPB.NewPlanRequest) => {
+                            handleCreatePlan(request);
+                            setIsPlanCreating(false);
+                        }} handleCancel={() => setIsPlanCreating(false)} /> :
+                        <button onClick={_ => setIsPlanCreating(true)}>Create new plan</button>
+                    }
+                <div styleName="planer__controls">
+                    <span>Scale: {convertScaleToString(scale)}</span>
+                    <div>
+                        <input type="button" name="planer__controls-zoom-in" value="in" onClick={_ => 
+                            setScale(scale == planPB.TimeScale.hour ? scale : scale + 1)
+                        }/>
+                        <input type="button" name="planer__controls-zoom-out" value="out" onClick={_ => 
+                            setScale(scale == planPB.TimeScale.undefined ? scale : scale - 1)
+                        }/>
+                    </div>
+                </div>
+                <div styleName="planer__plans">
+                    <APIContext.Provider value={api}>
+                        {agenda
+                        .filter((plan: planPB.Plan) => plan.scale == scale)
+                        .map((plan: planPB.Plan) =>
+                            <Plan
+                                plan={plan}
+                                handleChange={handleChangePlan}
+                                handleDelete={handleDeletePlan}
+                                key={plan.id} />
+                        )}
+                    </APIContext.Provider>
+                </div>
             </div>
-        </div>
+        </ScaleContext.Provider>
     )
 }

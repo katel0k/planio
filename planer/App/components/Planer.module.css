@@ -7,3 +7,9 @@
 .planer {
     padding: 0 25%;
 }
+
+.planer__controls {
+    display: flex;
+    justify-content: space-around;
+    flex-direction: column;
+}
