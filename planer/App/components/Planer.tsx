@@ -1,19 +1,21 @@
 import { ReactNode, useState, useEffect, useContext } from 'react';
 import { plan as planPB } from 'plan.proto'
-import { apiFactory, IdContext } from 'App/lib/api';
+import { APIContext, apiFactory, IdContext } from 'App/lib/api';
 import './Planer.module.css'
 import Plan from './Plan'
 import PlanCreator from './PlanCreator'
 
 export default function Planer(): ReactNode {
     const id = useContext<number>(IdContext);
-    const { getPlans, createPlan, changePlan, deletePlan } = apiFactory(id);
+    const api = apiFactory(id);
+    const { getPlans, createPlan, changePlan, deletePlan } = api;
     const [agenda, setAgenda] = useState<planPB.Plan[]>([]);
     const [isPlanCreating, setIsPlanCreating] = useState<boolean>(false);
     useEffect(() => {
         const controller = new AbortController()
         getPlans({ signal: controller.signal })
-            .then((res: planPB.Agenda) => setAgenda(res.plans.map((a: planPB.IPlan) => new planPB.Plan(a))));
+            .then((res: planPB.Agenda) => setAgenda(res.plans.map((a: planPB.IPlan) => new planPB.Plan(a))))
+            .catch(_ => {});
         return () => { controller.abort("Use effect cancelled") }
     }, []);
 
@@ -50,13 +52,15 @@ export default function Planer(): ReactNode {
                     <button onClick={_ => setIsPlanCreating(true)}>Create new plan</button>
             }
             <div styleName="planer__plans">
-                {agenda.map((plan: planPB.Plan) =>
-                    <Plan
-                        plan={plan}
-                        handleChange={handleChangePlan}
-                        handleDelete={handleDeletePlan}
-                        key={plan.id} />
-                )}
+                <APIContext.Provider value={api}>
+                    {agenda.map((plan: planPB.Plan) =>
+                        <Plan
+                            plan={plan}
+                            handleChange={handleChangePlan}
+                            handleDelete={handleDeletePlan}
+                            key={plan.id} />
+                    )}
+                </APIContext.Provider>
             </div>
         </div>
     )

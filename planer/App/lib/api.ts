@@ -31,12 +31,14 @@ export function makeIdFetch(id: number): fetchFunc {
 
 export const serverUrl: URL = new URL("http://0.0.0.0:5000");
 
-export function apiFactory(id: number): {
+export interface API {
     getPlans: (options?: RequestInit) => Promise<planPB.Agenda>,
     createPlan: (plan: planPB.NewPlanRequest, options?: RequestInit) => Promise<planPB.Plan>,
     changePlan: (change: planPB.ChangePlanRequest, options?: RequestInit) => Promise<planPB.Plan>,
     deletePlan: (del: planPB.DeletePlanRequest, options?: RequestInit) => Promise<planPB.Plan>
-} {
+}
+
+export function apiFactory(id: number): API {
     const url: URL = new URL("/plan", serverUrl);
     const f: fetchFunc = makeIdFetch(id);
     return {
@@ -83,3 +85,5 @@ export function apiFactory(id: number): {
         },
     }
 }
+
+export const APIContext = createContext<API | null>(null);

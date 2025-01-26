@@ -1,8 +1,12 @@
-import { ReactNode, useContext, useState } from 'react';
+import { createContext, ReactNode, useContext, useState } from 'react';
 import { plan as planPB } from 'plan.proto'
 import "./Plan.module.css"
 import debugContext from 'App/lib/debugContext';
 import { convertScaleToString } from 'App/lib/util';
+import PlanCreator from './PlanCreator';
+import { APIContext } from 'App/lib/api';
+
+export const PlanParentIdContext = createContext<number | null>(null);
 
 export interface PlanProps {
     plan: planPB.Plan,
@@ -13,7 +17,9 @@ export interface PlanProps {
 export default function Plan({ plan, handleChange, handleDelete }: PlanProps): ReactNode {
     const [synopsis, setSynopsis] = useState<string>(plan.synopsis);
     const [isEditing, setIsEditing] = useState<boolean>(false);
+    const [isCreatingSubplan, setIsCreatingSubplan] = useState<boolean>(false);
     const debug = useContext(debugContext);
+    const api = useContext(APIContext);
 
     return (
         <div styleName="plan">
@@ -45,6 +51,24 @@ export default function Plan({ plan, handleChange, handleDelete }: PlanProps): R
                     }}>{isEditing ? 'save' : 'edit'}</button>
                 <button styleName="plan__settings-delete" onClick={_ => 
                     handleDelete(planPB.DeletePlanRequest.create({id: plan.id}))}>delete</button>
+                <button styleName="plan__settings-subplan" onClick={_ => setIsCreatingSubplan(true)}>sub plan</button>
+            </div>
+            <div>
+                {isCreatingSubplan && <PlanCreator 
+                    handleSubmit={(request: planPB.NewPlanRequest) => {
+                        request.parent = plan.id;
+                        api?.createPlan(request);
+                        setIsCreatingSubplan(false);
+                    }}
+                    handleCancel={() => setIsCreatingSubplan(false)}
+                    />}
+            </div>
+            <div styleName="plan__subplans">
+                <PlanParentIdContext.Provider value={plan.id}>
+                    {
+
+                    }
+                </PlanParentIdContext.Provider>
             </div>
         </div>
     )
