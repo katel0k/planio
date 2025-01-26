@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/katel0k/planio/server/lib"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
@@ -95,12 +94,12 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := r.Context().Value(DB).(lib.Database).FindUser(joinReq.Username)
+	id, err := r.Context().Value(DB).(Database).FindUser(joinReq.Username)
 	var isNew bool = false
 
 	if err != nil {
-		if errors.Is(err, lib.ErrNotFound) {
-			id, err = r.Context().Value(DB).(lib.Database).CreateNewUser(joinReq.Username)
+		if errors.Is(err, ErrNotFound) {
+			id, err = r.Context().Value(DB).(Database).CreateNewUser(joinReq.Username)
 			if err != nil {
 				return
 			}
@@ -133,7 +132,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 	receiver := int(msg.ReceiverId)
 
 	id, _ := getId(r)
-	msgId, err := r.Context().Value(DB).(lib.Database).CreateNewMessage(id, receiver, msg.Text)
+	msgId, err := r.Context().Value(DB).(Database).CreateNewMessage(id, receiver, msg.Text)
 	if err != nil {
 		return
 	}
@@ -156,7 +155,7 @@ func messagesHandler(w http.ResponseWriter, r *http.Request) {
 	if getRequest(r, &msg) != nil {
 		return
 	}
-	msgs, _ := r.Context().Value(DB).(lib.Database).GetAllMessages(&msg)
+	msgs, _ := r.Context().Value(DB).(Database).GetAllMessages(&msg)
 	marsh, _ := proto.Marshal(msgs)
 	w.Write(marsh)
 }
@@ -190,7 +189,7 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		id, _ := getId(r)
-		agenda, _ := r.Context().Value(DB).(lib.Database).GetAllPlans(id)
+		agenda, _ := r.Context().Value(DB).(Database).GetAllPlans(id)
 		marsh, _ := proto.Marshal(agenda)
 		w.Write(marsh)
 	case "POST":
@@ -201,7 +200,7 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 			log.Default().Print(err)
 			return
 		}
-		plan, _ := r.Context().Value(DB).(lib.Database).CreateNewPlan(id, &planReq)
+		plan, _ := r.Context().Value(DB).(Database).CreateNewPlan(id, &planReq)
 		marsh, _ := proto.Marshal(plan)
 		w.Write(marsh)
 	case "PATCH":
@@ -211,7 +210,7 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		err := r.Context().Value(DB).(lib.Database).ChangePlan(&planReq)
+		err := r.Context().Value(DB).(Database).ChangePlan(&planReq)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 		} else {
@@ -224,7 +223,7 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		err := r.Context().Value(DB).(lib.Database).DeletePlan(int(planReq.Id))
+		err := r.Context().Value(DB).(Database).DeletePlan(int(planReq.Id))
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 		} else {
@@ -259,15 +258,15 @@ func main() {
 	useCookies := flag.Bool("c", DEFAULT_USE_COOKIES, "Use cookies or simple join id and a header")
 	serverPort := flag.Int("p", DEFAULT_SERVER_PORT, "Server port")
 	flag.Parse()
-	db := lib.Database{
-		Pool: lib.ConnectDB(*databasePort),
+	db := Database{
+		Pool: ConnectDB(*databasePort),
 	}
 	defer db.Pool.Close()
 
 	onlineUsers := onlineUsers{
 		body: make(map[int]userOnline),
 	}
-	logger := lib.Logging(log.New(os.Stdout, "", log.LstdFlags))
+	logger := Logging(log.New(os.Stdout, "", log.LstdFlags))
 
 	s := &http.Server{
 		Addr: fmt.Sprintf(":%d", *serverPort),
