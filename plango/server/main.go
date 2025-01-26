@@ -16,7 +16,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
-	joinPB "github.com/katel0k/planio/server/build/join"
+	authPB "github.com/katel0k/planio/server/build/auth"
 )
 
 type contextKey int
@@ -67,21 +67,21 @@ func getRequest(r *http.Request, m proto.Message) error {
 
 func authHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	var joinReq joinPB.JoinRequest // TODO: temporary solution, will separate join and auth handlers later
-	if getRequest(r, &joinReq) != nil {
+	var authReq authPB.AuthRequest // TODO: temporary solution, will separate join and auth handlers later
+	if getRequest(r, &authReq) != nil {
 		return
 	}
 
-	id, err := r.Context().Value(DB).(Database).FindUser(joinReq.Username)
-	var isNew bool = false
+	id, err := r.Context().Value(DB).(Database).FindUser(authReq.Username)
+	var success bool
 
 	if err != nil {
+		success = false
 		if errors.Is(err, ErrNotFound) {
-			id, err = r.Context().Value(DB).(Database).CreateNewUser(joinReq.Username)
+			id, err = r.Context().Value(DB).(Database).CreateNewUser(authReq.Username)
 			if err != nil {
 				return
 			}
-			isNew = true
 		} else {
 			return
 		}
@@ -95,8 +95,17 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		http.SetCookie(w, &cookie)
 	}
-
-	marsh, _ := proto.Marshal(&joinPB.JoinResponse{Id: int32(id), IsNew: isNew})
+	response := authPB.AuthResponse{Successful: success}
+	if success {
+		response.Response = &authPB.AuthResponse_Id{
+			Id: int32(id),
+		}
+	} else {
+		response.Response = &authPB.AuthResponse_Reason{
+			Reason: "Incorrect username",
+		}
+	}
+	marsh, _ := proto.Marshal(&response)
 	w.Write(marsh)
 }
 
