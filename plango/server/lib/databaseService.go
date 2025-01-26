@@ -95,15 +95,21 @@ func (db Database) GetAllMessages(req *msg_pb.AllMessagesRequest) (*msg_pb.AllMe
 
 func (db Database) GetAllPlans(user_id int) (*plan_pb.Agenda, error) {
 	rows, err := db.Pool.Query(context.Background(),
-		"SELECT id, synopsis FROM plans WHERE author_id=$1", user_id)
+		`SELECT id, synopsis, creation_dttm, parent_id, scale, body as description
+		FROM plans FULL OUTER JOIN descriptions ON id=plan_id
+		WHERE author_id=$1`, user_id)
 	if err != nil {
 		return nil, err
 	}
-	var agenda plan_pb.Agenda
 	defer rows.Close()
+	var agenda plan_pb.Agenda
 	for rows.Next() {
 		var plan plan_pb.Plan
-		rows.Scan(&plan.Id, &plan.Synopsis)
+		var scale string
+		var creationTime time.Time
+		rows.Scan(&plan.Id, &plan.Synopsis, &creationTime, &plan.Parent, &scale, &plan.Description)
+		plan.CreationTime = timestamppb.New(creationTime)
+		plan.Scale = plan_pb.TimeScale(plan_pb.TimeScale_value[scale])
 		agenda.Plans = append(agenda.Plans, &plan)
 	}
 	return &agenda, nil
