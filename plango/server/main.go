@@ -65,9 +65,9 @@ func getRequest(r *http.Request, m proto.Message) error {
 	return err
 }
 
-func joinHandler(w http.ResponseWriter, r *http.Request) {
+func authHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	var joinReq joinPB.JoinRequest
+	var joinReq joinPB.JoinRequest // TODO: temporary solution, will separate join and auth handlers later
 	if getRequest(r, &joinReq) != nil {
 		return
 	}
@@ -87,8 +87,6 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	onlineUsers, _ := r.Context().Value(ONLINE_USERS).(*onlineUsers)
-	onlineUsers.addUser(id)
 	if r.Context().Value(USE_COOKIES).(bool) {
 		cookie := http.Cookie{
 			Name:   "id",
@@ -97,6 +95,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		http.SetCookie(w, &cookie)
 	}
+
 	marsh, _ := proto.Marshal(&joinPB.JoinResponse{Id: int32(id), IsNew: isNew})
 	w.Write(marsh)
 }
@@ -151,6 +150,8 @@ func main() {
 	http.HandleFunc("/messages", messagesHandler)
 
 	http.HandleFunc("/online", onlineUsersHandler)
+
+	http.HandleFunc("/auth", authHandler)
 
 	http.HandleFunc("/plan", planHandler)
 

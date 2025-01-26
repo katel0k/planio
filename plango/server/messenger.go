@@ -29,6 +29,19 @@ func (users *onlineUsers) addUser(id int) {
 	users.Unlock()
 }
 
+func joinHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	var joinReq joinPB.JoinRequest // TODO: take that from cookie instead
+	if getRequest(r, &joinReq) != nil {
+		return
+	}
+	id, _ := r.Context().Value(DB).(Database).FindUser(joinReq.Username)
+
+	onlineUsers, _ := r.Context().Value(ONLINE_USERS).(*onlineUsers)
+	onlineUsers.addUser(id)
+	w.WriteHeader(http.StatusOK)
+}
+
 func messageHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var msg msgPB.MsgRequest
