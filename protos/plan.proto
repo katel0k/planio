@@ -45,6 +45,7 @@ message Plan {
     optional google.protobuf.Timestamp creation_time = 4;
     optional int32 parent = 5;
     TimeScale scale = 6;
+    repeated Plan subplans = 7;
 }
 
 message Agenda {
