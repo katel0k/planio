@@ -112,7 +112,40 @@ func (db Database) GetAllPlans(userId int) (*planPB.Agenda, error) {
 		plan.Scale = planPB.TimeScale(planPB.TimeScale_value[scale])
 		agenda.Plans = append(agenda.Plans, &plan)
 	}
+	agenda.Plans, _ = getPlansTree(agenda.Plans)
 	return &agenda, nil
+}
+
+func getPlansTree(plans []*planPB.Plan) ([]*planPB.Plan, error) {
+	q := make([]int, 0)
+	m := make(map[int32]*planPB.Plan)
+	for p := range plans {
+		q = append(q, p)
+		m[plans[p].Id] = plans[p]
+	}
+	for len(q) > 0 {
+		ind := q[0]
+		p := plans[ind]
+		q = q[1:]
+		if p.Parent != nil {
+			if pl, ok := m[*p.Parent]; ok {
+				pl.Subplans = append(pl.Subplans, p)
+			} else {
+				q = append(q, ind)
+			}
+		} else {
+			m[p.Id] = p
+		}
+	}
+
+	res := make([]*planPB.Plan, 0)
+	for p := range m {
+		if m[p].Parent == nil {
+			res = append(res, m[p])
+		}
+	}
+
+	return res, nil
 }
 
 func (db Database) CreateNewPlan(authorId int, plan *planPB.NewPlanRequest) (*planPB.Plan, error) {
