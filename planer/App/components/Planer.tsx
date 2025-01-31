@@ -4,7 +4,8 @@ import { APIContext, apiFactory, IdContext } from 'App/lib/api';
 import './Planer.module.css'
 import Plan from './Plan'
 import PlanCreator from './PlanCreator'
-import { convertScaleToString } from 'App/lib/util';
+import { agendaTree, convertIPlanToPlan, convertScaleToString } from 'App/lib/util';
+import Agenda, { ScaleTree } from './Agenda';
 
 export const ScaleContext = createContext<planPB.TimeScale>(planPB.TimeScale.undefined);
 
@@ -12,27 +13,30 @@ export default function Planer(): ReactNode {
     const id = useContext<number>(IdContext);
     const api = apiFactory(id);
     const { getPlans, createPlan, changePlan, deletePlan } = api;
-    const [agenda, setAgenda] = useState<planPB.Plan[]>([]);
+    const [agenda, setAgenda] = useState<agendaTree[]>([]);
+    function findPlan(a: agendaTree[], id: number): agendaTree | null {
+        return a.reduce((res: agendaTree | null, b: agendaTree) => res ?? (b.id == id ? b : findPlan(b.subplans, id)), null);
+    }
     const [isPlanCreating, setIsPlanCreating] = useState<boolean>(false);
     const [scale, setScale] = useState<planPB.TimeScale>(planPB.TimeScale.undefined);
     useEffect(() => {
         const controller = new AbortController()
         getPlans({ signal: controller.signal })
-            .then((res: planPB.Agenda) => setAgenda(res.plans.map((a: planPB.IPlan) => new planPB.Plan(a))))
+            .then((res: planPB.Agenda) => setAgenda(res.plans.map(convertIPlanToPlan)))
             .catch(_ => {});
         return () => { controller.abort("Use effect cancelled") }
     }, []);
 
     const handleCreatePlan: (plan: planPB.NewPlanRequest) => void = (plan) => {
         createPlan(plan)
-            .then((res: planPB.Plan) => setAgenda([...agenda, res]))
+            .then((res: planPB.Plan) => setAgenda([...agenda, convertIPlanToPlan(res)]))
             .catch(_ => {});
     }
 
     const handleChangePlan: (change: planPB.ChangePlanRequest) => void = (change) => {
         changePlan(change)
             .then((res: planPB.Plan) => setAgenda(
-                agenda.map((a: planPB.Plan) => a.id == res.id ? res : a)
+                agenda.map((a: agendaTree) => a.id == res.id ? convertIPlanToPlan(res) : a)
             ))
             .catch(_ => {});
     }
@@ -69,7 +73,10 @@ export default function Planer(): ReactNode {
                 </div>
                 <div styleName="planer__plans">
                     <APIContext.Provider value={api}>
-                        {agenda
+                        <ScaleTree converter={id => <Plan key={id} handleChange={_=>{}} handleDelete={_=>{}} plan={findPlan(agenda, id) as agendaTree}/>}
+                            tree={agenda}/>
+                        {/* <Agenda agenda={agenda}/> */}
+                        {/* {agenda
                         .filter((plan: planPB.Plan) => plan.scale == scale)
                         .map((plan: planPB.Plan) =>
                             <Plan
@@ -77,7 +84,7 @@ export default function Planer(): ReactNode {
                                 handleChange={handleChangePlan}
                                 handleDelete={handleDeletePlan}
                                 key={plan.id} />
-                        )}
+                        )} */}
                     </APIContext.Provider>
                 </div>
             </div>

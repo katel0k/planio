@@ -1,0 +1,9 @@
+.agenda {
+    padding: 10px;
+}
+
+.agenda_parented {
+    border-radius: 0.2em;
+    padding: 10px;
+    border: 2px solid silver;
+}

@@ -11,3 +11,14 @@ export function convertScaleToString(scale: planPB.TimeScale): string {
         case planPB.TimeScale.unknown: return 'unknown';
     }
 }
+
+export type agendaTree = planPB.Plan & {
+    subplans: agendaTree[]
+}
+
+export function convertIPlanToPlan(plan: planPB.IPlan): agendaTree {
+    let p = new planPB.Plan(plan);
+    let conv = p as agendaTree;
+    conv.subplans = p.subplans.map(convertIPlanToPlan);
+    return conv;
+}
