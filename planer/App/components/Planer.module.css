@@ -1,9 +1,3 @@
-.planer__plans {
-    display: grid;
-    grid-auto-rows: minmax(50px, 1fr);
-    gap: 2px 0;
-}
-
 .planer {
     padding: 0 25%;
 }

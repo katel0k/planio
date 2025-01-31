@@ -24,36 +24,36 @@ export default function Plan({ plan, handleChange, handleDelete }: PlanProps): R
     return (
         <div styleName="plan">
             { debug && <div><span>{plan.id}</span></div> }
-            <div styleName="plan__info">
-                <div>
+            <div styleName="plan__body">
+                <div styleName="plan__info">
                     {isEditing ? 
                         <input styleName="plan__synopsis-editor" type="text"
                             value={synopsis}
                             onChange={e => setSynopsis(e.target.value)}
                             name="plan__synopsis-editor" /> :
                         <span styleName="plan__synopsis">{synopsis}</span>}
+                    <div styleName="plan__description">{plan.description ?? ""}</div>
+                    <div styleName="plan__time-scale">{convertScaleToString(plan.scale)}</div>
                 </div>
-                <div styleName="plan__description">{plan.description ?? ""}</div>
-                <div styleName="plan__time-scale">{convertScaleToString(plan.scale)}</div>
+                <div styleName="plan__settings">
+                    <button styleName="plan__settings-change"
+                        onClick={_ => {
+                            if (isEditing) {
+                                handleChange(planPB.ChangePlanRequest.create({
+                                    id: plan.id,
+                                    synopsis
+                                }));
+                                setIsEditing(false);
+                            } else {
+                                setIsEditing(true);
+                            }
+                        }}>{isEditing ? 'save' : 'edit'}</button>
+                    <button styleName="plan__settings-delete" onClick={_ => 
+                        handleDelete(planPB.DeletePlanRequest.create({id: plan.id}))}>delete</button>
+                    <button styleName="plan__settings-subplan" onClick={_ => setIsCreatingSubplan(true)}>subplan</button>
+                </div>
             </div>
-            <div styleName="plan__settings">
-                <button styleName="plan__settings-change"
-                    onClick={_ => {
-                        if (isEditing) {
-                            handleChange(planPB.ChangePlanRequest.create({
-                                id: plan.id,
-                                synopsis
-                            }));
-                            setIsEditing(false);
-                        } else {
-                            setIsEditing(true);
-                        }
-                    }}>{isEditing ? 'save' : 'edit'}</button>
-                <button styleName="plan__settings-delete" onClick={_ => 
-                    handleDelete(planPB.DeletePlanRequest.create({id: plan.id}))}>delete</button>
-                <button styleName="plan__settings-subplan" onClick={_ => setIsCreatingSubplan(true)}>sub plan</button>
-            </div>
-            <div>
+            <div styleName="plan__subplans">
                 {isCreatingSubplan && <PlanCreator 
                     handleSubmit={(request: planPB.NewPlanRequest) => {
                         request.parent = plan.id;
@@ -62,11 +62,12 @@ export default function Plan({ plan, handleChange, handleDelete }: PlanProps): R
                     }}
                     handleCancel={() => setIsCreatingSubplan(false)}
                     />}
-            </div>
-            <div styleName="plan__subplans">
                 <PlanParentIdContext.Provider value={plan.id}>
                     {
-
+                        plan.subplans.map((pl: planPB.IPlan) => {
+                            let p = new planPB.Plan(pl);
+                            return <Plan plan={p} key={p.id} handleChange={_=>{}} handleDelete={_=>{}} />
+                        })
                     }
                 </PlanParentIdContext.Provider>
             </div>

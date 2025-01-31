@@ -1,7 +1,13 @@
 .plan {
     display: flex;
     justify-content: space-between;
-    padding: 5px;
+    flex-direction: column;
+}
+
+.plan__body {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
     border-bottom: 2px solid lightgray;
 }
 
@@ -33,17 +39,20 @@
     display: flex;
     justify-content: space-around;
     flex-direction: column;
-    width: 100%;
+    width: 100px;
     gap: 0.2em;
 }
 
 .plan__settings-change {
     color: green;
-    width: 50px;
     text-align: center;
     box-sizing: content-box;
 }
 
 .plan__settings-delete {
     color: red;
+}
+
+.plan__subplans {
+    padding-left: 30px;
 }
