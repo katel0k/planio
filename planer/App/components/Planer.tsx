@@ -54,7 +54,7 @@ export default function Planer(): ReactNode {
                             handleCreatePlan(request);
                             setIsPlanCreating(false);
                         }} handleCancel={() => setIsPlanCreating(false)} /> :
-                        <button onClick={_ => setIsPlanCreating(true)}>Create new plan</button>
+                        <input type="button" onClick={_ => setIsPlanCreating(true)} value="Create new plan" />
                     }
                 <div styleName="planer__controls">
                     <span>Scale: {convertScaleToString(scale)}</span>

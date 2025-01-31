@@ -36,7 +36,7 @@ export default function Plan({ plan, handleChange, handleDelete }: PlanProps): R
                     <div styleName="plan__time-scale">{convertScaleToString(plan.scale)}</div>
                 </div>
                 <div styleName="plan__settings">
-                    <button styleName="plan__settings-change"
+                    <input type="button" styleName="plan__settings-change"
                         onClick={_ => {
                             if (isEditing) {
                                 handleChange(planPB.ChangePlanRequest.create({
@@ -47,10 +47,11 @@ export default function Plan({ plan, handleChange, handleDelete }: PlanProps): R
                             } else {
                                 setIsEditing(true);
                             }
-                        }}>{isEditing ? 'save' : 'edit'}</button>
-                    <button styleName="plan__settings-delete" onClick={_ => 
-                        handleDelete(planPB.DeletePlanRequest.create({id: plan.id}))}>delete</button>
-                    <button styleName="plan__settings-subplan" onClick={_ => setIsCreatingSubplan(true)}>subplan</button>
+                        }} value={isEditing ? 'save' : 'edit'} />
+                    <input type="button" styleName="plan__settings-delete" onClick={_ => 
+                        handleDelete(planPB.DeletePlanRequest.create({id: plan.id}))} value="delete" />
+                    <input type="button" styleName="plan__settings-subplan"
+                        onClick={_ => setIsCreatingSubplan(true)} value="subplan" />
                 </div>
             </div>
             <div styleName="plan__subplans">
