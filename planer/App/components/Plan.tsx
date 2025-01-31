@@ -1,12 +1,11 @@
-import { createContext, ReactNode, useContext, useState } from 'react';
+import { ReactNode, useContext, useState } from 'react';
 import { plan as planPB } from 'plan.proto'
 import "./Plan.module.css"
 import debugContext from 'App/lib/debugContext';
 import { convertScaleToString } from 'App/lib/util';
 import PlanCreator from './PlanCreator';
 import { APIContext } from 'App/lib/api';
-
-export const PlanParentIdContext = createContext<number | null>(null);
+import { ScaleContext } from './Planer';
 
 export interface PlanProps {
     plan: planPB.Plan,
@@ -20,6 +19,7 @@ export default function Plan({ plan, handleChange, handleDelete }: PlanProps): R
     const [isCreatingSubplan, setIsCreatingSubplan] = useState<boolean>(false);
     const debug = useContext(debugContext);
     const api = useContext(APIContext);
+    const scale = useContext(ScaleContext);
 
     return (
         <div styleName="plan">
@@ -62,14 +62,12 @@ export default function Plan({ plan, handleChange, handleDelete }: PlanProps): R
                     }}
                     handleCancel={() => setIsCreatingSubplan(false)}
                     />}
-                <PlanParentIdContext.Provider value={plan.id}>
-                    {
-                        plan.subplans.map((pl: planPB.IPlan) => {
-                            let p = new planPB.Plan(pl);
-                            return <Plan plan={p} key={p.id} handleChange={_=>{}} handleDelete={_=>{}} />
-                        })
-                    }
-                </PlanParentIdContext.Provider>
+                {
+                    plan.subplans
+                    .map((p: planPB.IPlan) => new planPB.Plan(p))
+                    .filter((p: planPB.Plan) => p.scale == scale)
+                    .map((p: planPB.Plan) => <Plan plan={p} key={p.id} handleChange={_=>{}} handleDelete={_=>{}} />)
+                }
             </div>
         </div>
     )
