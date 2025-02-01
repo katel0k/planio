@@ -32,7 +32,7 @@ export function makeIdFetch(id: number): fetchFunc {
 export const serverUrl: URL = new URL("http://0.0.0.0:5000");
 
 export interface API {
-    getPlans: (options?: RequestInit) => Promise<planPB.Agenda>,
+    getPlans: (options?: RequestInit) => Promise<planPB.UserPlans>,
     createPlan: (plan: planPB.NewPlanRequest, options?: RequestInit) => Promise<planPB.Plan>,
     changePlan: (change: planPB.ChangePlanRequest, options?: RequestInit) => Promise<planPB.Plan>,
     deletePlan: (del: planPB.DeletePlanRequest, options?: RequestInit) => Promise<planPB.Plan>
@@ -42,10 +42,10 @@ export function apiFactory(id: number): API {
     const url: URL = new URL("/plan", serverUrl);
     const f: fetchFunc = makeIdFetch(id);
     return {
-        async getPlans(options?: RequestInit): Promise<planPB.Agenda> {
+        async getPlans(options?: RequestInit): Promise<planPB.UserPlans> {
             const response = await f(url, options);
             const buffer = await response.arrayBuffer();
-            return planPB.Agenda.decode(new Uint8Array(buffer));
+            return planPB.UserPlans.decode(new Uint8Array(buffer));
         },
         async createPlan(plan: planPB.NewPlanRequest, options?: RequestInit): Promise<planPB.Plan> {
             const response = await f(url, {

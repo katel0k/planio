@@ -12,13 +12,18 @@ export function convertScaleToString(scale: planPB.TimeScale): string {
     }
 }
 
-export type agendaTree = planPB.Plan & {
-    subplans: agendaTree[]
+export type agenda = {
+    body: {
+        id: number,
+        scale: planPB.TimeScale
+    } | null
+    subplans: agenda[]
 }
 
-export function convertIPlanToPlan(plan: planPB.IPlan): agendaTree {
-    let p = new planPB.Plan(plan);
-    let conv = p as agendaTree;
-    conv.subplans = p.subplans.map(convertIPlanToPlan);
-    return conv;
+export function convertIAgendaToAgenda(agenda: planPB.IAgenda): agenda {
+    let ag = new planPB.Agenda(agenda) as agenda;
+    ag.body = ag.body ? new planPB.Agenda.AgendaNode(ag.body) : null;
+    ag.subplans = ag.subplans.map(convertIAgendaToAgenda);
+    console.log(ag);
+    return ag;
 }

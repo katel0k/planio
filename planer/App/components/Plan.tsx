@@ -63,12 +63,12 @@ export default function Plan({ plan, handleChange, handleDelete }: PlanProps): R
                     }}
                     handleCancel={() => setIsCreatingSubplan(false)}
                     />}
-                {
+                {/* {
                     plan.subplans
                     .map((p: planPB.IPlan) => new planPB.Plan(p))
                     .filter((p: planPB.Plan) => p.scale == scale)
                     .map((p: planPB.Plan) => <Plan plan={p} key={p.id} handleChange={_=>{}} handleDelete={_=>{}} />)
-                }
+                } */}
             </div>
         </div>
     )
