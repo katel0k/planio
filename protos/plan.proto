@@ -45,9 +45,20 @@ message Plan {
     optional google.protobuf.Timestamp creation_time = 4;
     optional int32 parent = 5;
     TimeScale scale = 6;
-    repeated Plan subplans = 7;
+}
+
+message UserPlans {
+    int32 user_id = 1;
+    repeated Plan body = 2;
+    optional Agenda structure = 3;
 }
 
 message Agenda {
-    repeated Plan plans = 1;
+    message AgendaNode {
+        int32 id = 1;
+        TimeScale scale = 2;
+    }
+
+    optional AgendaNode body = 3; // optional for root
+    repeated Agenda subplans = 4;
 }
