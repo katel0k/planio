@@ -12,7 +12,7 @@ export const ScaleContext = createContext<planPB.TimeScale>(planPB.TimeScale.lif
 export default function Planer(): ReactNode {
     const id = useContext<number>(IdContext);
     const api = apiFactory(id);
-    const { getPlans, createPlan, changePlan, deletePlan } = api;
+    const { getPlans } = api;
     const [agenda, setAgenda] = useState<agenda[]>([]);
     const [plans, setPlans] = useState<Map<number, planPB.Plan>>(new Map());
     // function findPlan(a: agendaTree[], id: number): agendaTree | null {
@@ -60,7 +60,7 @@ export default function Planer(): ReactNode {
             <div styleName="planer">
                 {
                     isPlanCreating ?
-                        <PlanCreator handleSubmit={(request: planPB.NewPlanRequest) => {
+                        <PlanCreator handleSubmit={(_: planPB.NewPlanRequest) => {
                             // handleCreatePlan(request);
                             setIsPlanCreating(false);
                         }} handleCancel={() => setIsPlanCreating(false)} /> :
@@ -85,16 +85,6 @@ export default function Planer(): ReactNode {
                                 handleDelete={_=>{}}
                                 plan={plans.get(id) as planPB.Plan}/>}
                             tree={agenda}/>
-                        {/* <Agenda agenda={agenda}/> */}
-                        {/* {agenda
-                        .filter((plan: planPB.Plan) => plan.scale == scale)
-                        .map((plan: planPB.Plan) =>
-                            <Plan
-                                plan={plan}
-                                handleChange={handleChangePlan}
-                                handleDelete={handleDeletePlan}
-                                key={plan.id} />
-                        )} */}
                     </APIContext.Provider>
                 </div>
             </div>
