@@ -4,7 +4,7 @@ import { APIContext, apiFactory, IdContext } from 'App/lib/api';
 import './Planer.module.css'
 import Plan from './Plan'
 import PlanCreator from './PlanCreator'
-import { agenda, convertIAgendaToAgenda, convertScaleToString } from 'App/lib/util';
+import { convertScaleToString } from 'App/lib/util'
 import { ScaleTree } from './Agenda';
 
 export const ScaleContext = createContext<planPB.TimeScale>(planPB.TimeScale.life);
@@ -13,21 +13,16 @@ export default function Planer(): ReactNode {
     const id = useContext<number>(IdContext);
     const api = apiFactory(id);
     const { getPlans } = api;
-    const [agenda, setAgenda] = useState<agenda[]>([]);
+    const [agenda, setAgenda] = useState<planPB.Agenda[]>([]);
     const [plans, setPlans] = useState<Map<number, planPB.Plan>>(new Map());
-    // function findPlan(a: agendaTree[], id: number): agendaTree | null {
-    //     return a.reduce((res: agendaTree | null, b: agendaTree) => res ?? (b.id == id ? b : findPlan(b.subplans, id)), null);
-    // }
     const [isPlanCreating, setIsPlanCreating] = useState<boolean>(false);
     const [scale, setScale] = useState<planPB.TimeScale>(planPB.TimeScale.life);
     useEffect(() => {
         const controller = new AbortController()
         getPlans({ signal: controller.signal })
             .then((res: planPB.UserPlans) => {
-                console.log(res);
-                setAgenda(res.structure ? convertIAgendaToAgenda(res.structure).subplans : []);
+                setAgenda(res.structure ? res.structure.subplans : []);
                 setPlans(new Map(res.body.map(a => new planPB.Plan(a)).map((a: planPB.Plan) => [a.id, a])));
-                // console.log(res.structure ? convertIAgendaToAgenda(res.structure).subplans : []);
             })
             .catch(_ => {});
         return () => { controller.abort("Use effect cancelled") }

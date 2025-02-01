@@ -56,7 +56,9 @@ module.exports = {
                     loader: 'protobufjs-loader',
                     options: {
                         paths: globSync(path.resolve(protoPath, './*.proto')),
-                        pbjsArgs: [],
+                        pbjsArgs: [
+                            '--null-semantics'
+                        ],
                         pbts: {
                             output: protobufFile =>
                                 path.join(__dirname, './App/protos/', path.basename(protobufFile) + '.d.ts')
