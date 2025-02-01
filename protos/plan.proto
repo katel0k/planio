@@ -27,7 +27,7 @@ message ChangePlanRequest {
 }
 
 enum TimeScale {
-    undefined = 0;
+    life = 0;
     year = 1;
     month = 2;
     week = 3;

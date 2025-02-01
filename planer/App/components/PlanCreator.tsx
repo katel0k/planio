@@ -8,7 +8,7 @@ export default function PlanCreator({ handleSubmit, handleCancel }: {
 }): ReactNode {
     const [synopsis, setSynopsis] = useState<string>('');
     const [description, setDescription] = useState<string>('');
-    const [scale, setScale] = useState<planPB.TimeScale>(planPB.TimeScale.undefined);
+    const [scale, setScale] = useState<planPB.TimeScale>(planPB.TimeScale.life);
     const [time, setTime] = useState<Date>(new Date());
     useEffect(() => {
         const timerId = setTimeout(() => {
@@ -34,7 +34,7 @@ export default function PlanCreator({ handleSubmit, handleCancel }: {
             <input styleName="plan-creator__description" type="text" name="description"
                     onChange={e => setDescription(e.target.value)} value={description} />
             <select styleName="plan-creator__scale" name="scale" value={scale} onChange={e => setScale(Number(e.target.value) as planPB.TimeScale)}>
-                <option value={planPB.TimeScale.undefined}>Undefined</option>
+                <option value={planPB.TimeScale.life}>Life</option>
                 <option value={planPB.TimeScale.year}>Year</option>
                 <option value={planPB.TimeScale.month}>Month</option>
                 <option value={planPB.TimeScale.week}>Week</option>

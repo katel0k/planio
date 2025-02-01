@@ -5,7 +5,7 @@ CREATE TABLE users (
     nickname VARCHAR(32) NOT NULL UNIQUE
 );
 
-CREATE TYPE time_scale AS ENUM ('undefined', 'year', 'month', 'week', 'day', 'hour');
+CREATE TYPE time_scale AS ENUM ('life', 'year', 'month', 'week', 'day', 'hour');
 
 CREATE TABLE plans (
     id SERIAL PRIMARY KEY,
@@ -13,7 +13,7 @@ CREATE TABLE plans (
     synopsis VARCHAR(128) NOT NULL,
     creation_dttm TIMESTAMP DEFAULT NOW()::TIMESTAMP,
     parent_id INTEGER DEFAULT NULL,
-    scale time_scale DEFAULT 'undefined'
+    scale time_scale DEFAULT 'life'
 );
 
 ALTER TABLE plans ADD CONSTRAINT FK_users_plans FOREIGN KEY
@@ -47,7 +47,7 @@ CREATE VIEW user_plans_roots
 AS (
     SELECT author_id AS user_id, id AS plan_id
     FROM plans
-    WHERE scale='undefined' AND parent_id IS NULL
+    WHERE scale='life' AND parent_id IS NULL
 );
 
 COMMIT;

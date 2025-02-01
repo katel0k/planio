@@ -7,7 +7,7 @@ import PlanCreator from './PlanCreator'
 import { agendaTree, convertIPlanToPlan, convertScaleToString } from 'App/lib/util';
 import Agenda, { ScaleTree } from './Agenda';
 
-export const ScaleContext = createContext<planPB.TimeScale>(planPB.TimeScale.undefined);
+export const ScaleContext = createContext<planPB.TimeScale>(planPB.TimeScale.life);
 
 export default function Planer(): ReactNode {
     const id = useContext<number>(IdContext);
@@ -18,7 +18,7 @@ export default function Planer(): ReactNode {
         return a.reduce((res: agendaTree | null, b: agendaTree) => res ?? (b.id == id ? b : findPlan(b.subplans, id)), null);
     }
     const [isPlanCreating, setIsPlanCreating] = useState<boolean>(false);
-    const [scale, setScale] = useState<planPB.TimeScale>(planPB.TimeScale.undefined);
+    const [scale, setScale] = useState<planPB.TimeScale>(planPB.TimeScale.life);
     useEffect(() => {
         const controller = new AbortController()
         getPlans({ signal: controller.signal })
@@ -67,7 +67,7 @@ export default function Planer(): ReactNode {
                             setScale(scale == planPB.TimeScale.hour ? scale : scale + 1)
                         }/>
                         <input type="button" name="planer__controls-zoom-out" value="out" onClick={_ => 
-                            setScale(scale == planPB.TimeScale.undefined ? scale : scale - 1)
+                            setScale(scale == planPB.TimeScale.life ? scale : scale - 1)
                         }/>
                     </div>
                 </div>
