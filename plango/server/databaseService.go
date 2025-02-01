@@ -117,7 +117,7 @@ func (db Database) GetAllPlans(userId int) (*planPB.UserPlans, error) {
 }
 
 type agendaNodePrototype struct {
-	body     planPB.Agenda_AgendaNode
+	body     *planPB.Agenda_AgendaNode
 	parent   *int32
 	subplans []*agendaNodePrototype
 }
@@ -132,17 +132,18 @@ func (db Database) GetAgenda(userId int) (*planPB.Agenda, error) {
 	prototype := make([]*agendaNodePrototype, 0)
 	for rows.Next() {
 		node := agendaNodePrototype{
-			body: planPB.Agenda_AgendaNode{},
+			body:   &planPB.Agenda_AgendaNode{},
+			parent: nil,
 		}
 		var scale string
-		rows.Scan(&node.body.Id, &node.parent, scale)
+		rows.Scan(&node.body.Id, &node.parent, &scale)
 		node.body.Scale = planPB.TimeScale(planPB.TimeScale_value[scale])
 		prototype = append(prototype, &node)
 	}
+	prototype = getScaleTreePrototype(prototype)
 	res := planPB.Agenda{
 		Body: nil, // root
 	}
-	prototype = getScaleTreePrototype(prototype)
 	for i := range prototype {
 		res.Subplans = append(res.Subplans, convertPrototypeToAgenda(prototype[i]))
 	}
@@ -172,7 +173,7 @@ func getScaleTreePrototype(plans []*agendaNodePrototype) []*agendaNodePrototype 
 			m[p.body.Id] = p
 		}
 	}
-	var res []*agendaNodePrototype
+	res := make([]*agendaNodePrototype, 0)
 	for p := range m {
 		if m[p].parent == nil {
 			res = append(res, m[p])
@@ -182,12 +183,12 @@ func getScaleTreePrototype(plans []*agendaNodePrototype) []*agendaNodePrototype 
 }
 
 func convertPrototypeToAgenda(prototype *agendaNodePrototype) *planPB.Agenda {
-	var subplans []*planPB.Agenda
-	for p := range prototype.subplans {
-		subplans = append(subplans, convertPrototypeToAgenda(prototype.subplans[p]))
+	subplans := make([]*planPB.Agenda, 0)
+	for i := range prototype.subplans {
+		subplans = append(subplans, convertPrototypeToAgenda(prototype.subplans[i]))
 	}
 	return &planPB.Agenda{
-		Body:     &prototype.body,
+		Body:     prototype.body,
 		Subplans: subplans,
 	}
 }
