@@ -12,8 +12,10 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		id, _ := getId(r)
-		agenda, _ := r.Context().Value(DB).(Database).GetAllPlans(id)
-		marsh, _ := proto.Marshal(agenda)
+		userPlans, _ := r.Context().Value(DB).(Database).GetAllPlans(id)
+		agenda, _ := r.Context().Value(DB).(Database).GetAgenda(id)
+		userPlans.Structure = agenda
+		marsh, _ := proto.Marshal(userPlans)
 		w.Write(marsh)
 	case "POST":
 		defer r.Body.Close()

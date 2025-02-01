@@ -93,7 +93,7 @@ func (db Database) GetAllMessages(req *msgPB.AllMessagesRequest) (*msgPB.AllMess
 	return &resp, err
 }
 
-func (db Database) GetAllPlans(userId int) (*planPB.Agenda, error) {
+func (db Database) GetAllPlans(userId int) (*planPB.UserPlans, error) {
 	rows, err := db.Pool.Query(context.Background(),
 		`SELECT id, synopsis, creation_dttm, parent_id, scale, body as description
 		FROM plans FULL OUTER JOIN descriptions ON id=plan_id
@@ -102,7 +102,7 @@ func (db Database) GetAllPlans(userId int) (*planPB.Agenda, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var agenda planPB.Agenda
+	var res planPB.UserPlans
 	for rows.Next() {
 		var plan planPB.Plan
 		var scale string
@@ -110,42 +110,86 @@ func (db Database) GetAllPlans(userId int) (*planPB.Agenda, error) {
 		rows.Scan(&plan.Id, &plan.Synopsis, &creationTime, &plan.Parent, &scale, &plan.Description)
 		plan.CreationTime = timestamppb.New(creationTime)
 		plan.Scale = planPB.TimeScale(planPB.TimeScale_value[scale])
-		agenda.Plans = append(agenda.Plans, &plan)
+		res.Body = append(res.Body, &plan)
 	}
-	agenda.Plans, _ = getPlansTree(agenda.Plans)
-	return &agenda, nil
+	res.UserId = int32(userId)
+	return &res, nil
 }
 
-func getPlansTree(plans []*planPB.Plan) ([]*planPB.Plan, error) {
+type agendaNodePrototype struct {
+	body     planPB.Agenda_AgendaNode
+	parent   *int32
+	subplans []*agendaNodePrototype
+}
+
+func (db Database) GetAgenda(userId int) (*planPB.Agenda, error) {
+	rows, err := db.Pool.Query(context.Background(),
+		`SELECT id, parent_id, scale FROM plans WHERE author_id=$1`, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	prototype := make([]*agendaNodePrototype, 0)
+	for rows.Next() {
+		node := agendaNodePrototype{
+			body: planPB.Agenda_AgendaNode{},
+		}
+		var scale string
+		rows.Scan(&node.body.Id, &node.parent, scale)
+		node.body.Scale = planPB.TimeScale(planPB.TimeScale_value[scale])
+		prototype = append(prototype, &node)
+	}
+	res := planPB.Agenda{
+		Body: nil, // root
+	}
+	prototype = getScaleTreePrototype(prototype)
+	for i := range prototype {
+		res.Subplans = append(res.Subplans, convertPrototypeToAgenda(prototype[i]))
+	}
+	return &res, nil
+}
+
+func getScaleTreePrototype(plans []*agendaNodePrototype) []*agendaNodePrototype {
+	// converts plain tree into an actual tree. Works in O(number of edges)
+	// at least if we believe in good go compiler
 	q := make([]int, 0)
-	m := make(map[int32]*planPB.Plan)
+	m := make(map[int32]*agendaNodePrototype)
 	for p := range plans {
 		q = append(q, p)
-		m[plans[p].Id] = plans[p]
+		m[plans[p].body.Id] = plans[p]
 	}
 	for len(q) > 0 {
 		ind := q[0]
 		p := plans[ind]
 		q = q[1:]
-		if p.Parent != nil {
-			if pl, ok := m[*p.Parent]; ok {
-				pl.Subplans = append(pl.Subplans, p)
+		if p.parent != nil {
+			if pl, ok := m[*p.parent]; ok {
+				pl.subplans = append(pl.subplans, p)
 			} else {
 				q = append(q, ind)
 			}
 		} else {
-			m[p.Id] = p
+			m[p.body.Id] = p
 		}
 	}
-
-	res := make([]*planPB.Plan, 0)
+	var res []*agendaNodePrototype
 	for p := range m {
-		if m[p].Parent == nil {
+		if m[p].parent == nil {
 			res = append(res, m[p])
 		}
 	}
+	return res
+}
 
-	return res, nil
+func convertPrototypeToAgenda(prototype *agendaNodePrototype) *planPB.Agenda {
+	var subplans []*planPB.Agenda
+	for p := range prototype.subplans {
+		subplans = append(subplans, convertPrototypeToAgenda(prototype.subplans[p]))
+	}
+	return &planPB.Agenda{
+		Body:     &prototype.body,
+		Subplans: subplans,
+	}
 }
 
 func (db Database) CreateNewPlan(authorId int, plan *planPB.NewPlanRequest) (*planPB.Plan, error) {
