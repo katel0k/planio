@@ -50,4 +50,16 @@ AS (
     WHERE scale='life' AND parent_id IS NULL
 );
 
+CREATE TABLE events (
+    id SERIAL PRIMARY KEY,
+    author_id INTEGER NOT NULL,
+    synopsis VARCHAR(128) NOT NULL,
+    creation_dttm TIMESTAMP DEFAULT NOW()::TIMESTAMP,
+    dttm TIMESTAMP -- might be null, indicates an event in the future with undeterminate time
+    -- metainfo will be further
+);
+
+ALTER TABLE events ADD CONSTRAINT FK_users_events FOREIGN KEY
+    (author_id) REFERENCES users(id);
+
 COMMIT;
