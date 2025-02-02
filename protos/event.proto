@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "event/";
+
+package event;
+
+message NewEventRequest {
+    string synopsis = 1;
+    google.protobuf.Timestamp time = 2;
+}
+
+message Event {
+    int32 id = 1;
+    string synopsis = 2;
+
+    google.protobuf.Timestamp creation_time = 3;
+    google.protobuf.Timestamp time = 4;
+}
