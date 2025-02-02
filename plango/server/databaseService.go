@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	eventPB "github.com/katel0k/planio/server/build/event"
 	msgPB "github.com/katel0k/planio/server/build/msg"
 	planPB "github.com/katel0k/planio/server/build/plan"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -220,4 +221,17 @@ func (db Database) ChangePlan(plan *planPB.ChangePlanRequest) error {
 func (db Database) DeletePlan(plan_id int) error {
 	_, err := db.Pool.Exec(context.Background(), "DELETE FROM plans WHERE id=$1", plan_id)
 	return err
+}
+
+func (db Database) CreateEvent(newEvent *eventPB.NewEventRequest) (*eventPB.Event, error) {
+	row := db.Pool.QueryRow(context.Background(),
+		`INSERT INTO events(synopsis, dttm) VALUE ($1, $2) RETURNING id, synopsis, creation_dttm, dttm`,
+		newEvent.Synopsis, newEvent.Time)
+	var res eventPB.Event
+	var creationTime time.Time
+	var dttm time.Time
+	err := row.Scan(&res.Id, &res.Synopsis, &creationTime, &dttm)
+	res.CreationTime = timestamppb.New(creationTime)
+	res.Time = timestamppb.New(dttm)
+	return &res, err
 }
