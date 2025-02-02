@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	eventPB "github.com/katel0k/planio/server/build/event"
 	planPB "github.com/katel0k/planio/server/build/plan"
 	"google.golang.org/protobuf/proto"
 )
@@ -56,5 +57,30 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		w.WriteHeader(http.StatusBadRequest)
+	}
+}
+
+func eventHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		id, _ := getId(r)
+		events, _ := r.Context().Value(DB).(Database).GetEvents(id)
+		calendar := eventPB.Calendar{
+			Body: make([]*eventPB.Event, 0),
+		}
+		calendar.Body = append(calendar.Body, events...)
+		marsh, _ := proto.Marshal(&calendar)
+		w.Write(marsh)
+	case "POST":
+		defer r.Body.Close()
+		id, _ := getId(r)
+		var eventReq eventPB.NewEventRequest
+		if err := getRequest(r, &eventReq); err != nil {
+			log.Default().Print(err)
+			return
+		}
+		plan, _ := r.Context().Value(DB).(Database).CreateEvent(id, &eventReq)
+		marsh, _ := proto.Marshal(plan)
+		w.Write(marsh)
 	}
 }

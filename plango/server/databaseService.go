@@ -223,10 +223,30 @@ func (db Database) DeletePlan(plan_id int) error {
 	return err
 }
 
-func (db Database) CreateEvent(newEvent *eventPB.NewEventRequest) (*eventPB.Event, error) {
+func (db Database) GetEvents(authorId int) ([]*eventPB.Event, error) {
+	rows, err := db.Pool.Query(context.Background(),
+		`SELECT id, synopsis, creation_dttm, dttm FROM events WHERE author_id=$1`, authorId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	events := make([]*eventPB.Event, 0)
+	for rows.Next() {
+		var event eventPB.Event
+		var creationTime time.Time
+		var dttm time.Time
+		rows.Scan(&event.Id, &event.Synopsis, &creationTime, &dttm)
+		event.CreationTime = timestamppb.New(creationTime)
+		event.Time = timestamppb.New(dttm)
+		events = append(events, &event)
+	}
+	return events, nil
+}
+
+func (db Database) CreateEvent(authorId int, newEvent *eventPB.NewEventRequest) (*eventPB.Event, error) {
 	row := db.Pool.QueryRow(context.Background(),
-		`INSERT INTO events(synopsis, dttm) VALUE ($1, $2) RETURNING id, synopsis, creation_dttm, dttm`,
-		newEvent.Synopsis, newEvent.Time)
+		`INSERT INTO events(author_id, synopsis, dttm) VALUE ($1, $2, $3) RETURNING id, synopsis, creation_dttm, dttm`,
+		authorId, newEvent.Synopsis, newEvent.Time)
 	var res eventPB.Event
 	var creationTime time.Time
 	var dttm time.Time

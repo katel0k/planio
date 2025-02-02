@@ -18,3 +18,7 @@ message Event {
     google.protobuf.Timestamp creation_time = 3;
     google.protobuf.Timestamp time = 4;
 }
+
+message Calendar {
+    repeated Event body = 1;
+}

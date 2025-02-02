@@ -165,6 +165,7 @@ func main() {
 	http.HandleFunc("/auth", authHandler)
 
 	http.HandleFunc("/plan", planHandler)
+	http.HandleFunc("/event", eventHandler)
 
 	http.Handle("/", http.FileServer(http.Dir(*staticDir)))
 
