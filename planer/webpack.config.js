@@ -55,7 +55,7 @@ module.exports = {
                 use: {
                     loader: 'protobufjs-loader',
                     options: {
-                        paths: globSync(path.resolve(protoPath, './*.proto')),
+                        paths: [...globSync(path.resolve(protoPath, './*.proto')), protoPath],
                         pbjsArgs: [
                             '--null-semantics'
                         ],
