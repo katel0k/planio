@@ -2,9 +2,10 @@ syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "plan/";
+option go_package = "github.com/katel0k/planio/server/build/plan";
 
 package plan;
+import "event.proto";
 
 message NewPlanRequest {
     string synopsis = 1;
@@ -51,6 +52,7 @@ message UserPlans {
     int32 user_id = 1;
     repeated Plan body = 2;
     optional Agenda structure = 3;
+    repeated event.Event events = 4;
 }
 
 message Agenda {

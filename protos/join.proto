@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package join;
 
-option go_package = "join/";
+option go_package = "github.com/katel0k/planio/server/build/join";
 
 message JoinRequest {
     string username = 1;
