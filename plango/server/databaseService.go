@@ -114,6 +114,11 @@ func (db Database) GetAllPlans(userId int) (*planPB.UserPlans, error) {
 		res.Body = append(res.Body, &plan)
 	}
 	res.UserId = int32(userId)
+	evs, err := db.GetEvents(userId)
+	if err != nil {
+		return nil, err
+	}
+	res.Events = evs
 	return &res, nil
 }
 
