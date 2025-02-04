@@ -124,7 +124,7 @@ func cors(next http.Handler) http.Handler {
 }
 
 const PING_RESPONSE_TIME time.Duration = time.Second * 4
-const DEFAULT_STATIC_DIR string = "../../planer/dist"
+const DEFAULT_STATIC_DIR string = "../planer/dist"
 const DEFAULT_DATABASE_PORT int = 32768
 const DEFAULT_USE_COOKIES bool = false
 const DEFAULT_SERVER_PORT int = 5000

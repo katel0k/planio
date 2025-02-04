@@ -95,7 +95,7 @@ func (db Database) GetAllMessages(req *PB.AllMessagesRequest) (*PB.AllMessagesRe
 
 func (db Database) GetAllPlans(userId int) (*PB.UserPlans, error) {
 	rows, err := db.Pool.Query(context.Background(),
-		`SELECT id, synopsis, creation_dttm, parent_id, scale, body as description, start as start_dttm, end as end_dttm
+		`SELECT id, synopsis, creation_dttm, parent_id, scale, body as description, start_dttm, end_dttm
 		FROM plans FULL OUTER JOIN descriptions d ON id=d.plan_id
 					FULL OUTER JOIN timeframes t ON id=t.plan_id
 		WHERE author_id=$1`, userId)
@@ -108,13 +108,15 @@ func (db Database) GetAllPlans(userId int) (*PB.UserPlans, error) {
 		var plan PB.Plan
 		var scale string
 		var creationTime time.Time
-		var startTime time.Time
-		var endTime time.Time
+		var startTime *time.Time
+		var endTime *time.Time
 		rows.Scan(&plan.Id, &plan.Synopsis, &creationTime, &plan.Parent, &scale, &plan.Description, &startTime, &endTime)
 		plan.CreationTime = timestamppb.New(creationTime)
-		plan.Timeframe = &PB.Timeframe{
-			Start: timestamppb.New(startTime),
-			End:   timestamppb.New(endTime),
+		if startTime != nil && endTime != nil {
+			plan.Timeframe = &PB.Timeframe{
+				Start: timestamppb.New(*startTime),
+				End:   timestamppb.New(*endTime),
+			}
 		}
 		plan.Scale = PB.TimeScale(PB.TimeScale_value[scale])
 		res.Body = append(res.Body, &plan)

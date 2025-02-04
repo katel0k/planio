@@ -12,7 +12,12 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		id, _ := getId(r)
-		userPlans, _ := r.Context().Value(DB).(Database).GetAllPlans(id)
+		userPlans, err := r.Context().Value(DB).(Database).GetAllPlans(id)
+		if err != nil {
+			log.Default().Print(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		agenda, _ := r.Context().Value(DB).(Database).GetAgenda(id)
 		userPlans.Structure = agenda
 		marsh, _ := proto.Marshal(userPlans)
