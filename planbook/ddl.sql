@@ -30,6 +30,15 @@ CREATE TABLE descriptions (
 ALTER TABLE descriptions ADD CONSTRAINT FK_description_for_plan FOREIGN KEY
     (plan_id) REFERENCES plans(id);
 
+CREATE TABLE timeframes (
+    plan_id INTEGER PRIMARY KEY,
+    start_dttm TIMESTAMP,
+    end_dttm TIMESTAMP
+);
+
+ALTER TABLE timeframes ADD CONSTRAINT FK_timeframe_for_plan FOREIGN KEY
+    (plan_id) REFERENCES plans(id);
+
 CREATE TABLE messages (
     id SERIAL PRIMARY KEY,
     author_id INTEGER,
