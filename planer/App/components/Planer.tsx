@@ -47,11 +47,11 @@ export default function Planer(): ReactNode {
                         </div>
                     </div>
                     <div styleName="planer__plans">
-                        <ScaleTree converter={id => 
+                        <ScaleTree converter={id => plans.has(id) ?
                             <Plan
                                 handleChange={api?.changePlan}
                                 handleDelete={api?.deletePlan}
-                                plan={plans.get(id) as planPB.Plan}/>}
+                                plan={plans.get(id) as planPB.Plan}/> : null}
                             tree={agenda}/>
                     </div>
                 </div>

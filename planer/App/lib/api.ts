@@ -50,10 +50,7 @@ export function apiFactory(id: number): API {
         async createPlan(plan: planPB.NewPlanRequest, options?: RequestInit): Promise<planPB.Plan> {
             const response = await f(url, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json;charset=utf-8'
-                },
-                body: JSON.stringify(plan.toJSON()),
+                body: planPB.NewPlanRequest.encode(plan).finish(),
                 ...options,
             });
             const buffer = await response.arrayBuffer();
