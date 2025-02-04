@@ -231,11 +231,11 @@ func (db Database) CreateNewPlan(authorId int, plan *PB.NewPlanRequest) (*PB.Pla
 	}
 
 	if plan.Timeframe != nil {
-		conn.Query(ctx, `UPDATE plans SET start_dttm=$1, end_dttm=$2 WHERE id=$3`,
-			plan.Timeframe.Start, plan.Timeframe.End, res.Id)
+		conn.QueryRow(ctx, `INSERT INTO timeframes(plan_id, start_dttm, end_dttm) VALUES ($1, $2, $3)`,
+			res.Id, plan.Timeframe.Start.AsTime(), plan.Timeframe.End.AsTime())
 	}
 	if plan.Description != nil && len(*plan.Description) != 0 {
-		conn.Query(ctx, `INSERT INTO descriptions(plan_id, body) VALUES ($1, $2)`,
+		conn.QueryRow(ctx, `INSERT INTO descriptions(plan_id, body) VALUES ($1, $2)`,
 			res.Id, plan.Description)
 	}
 
