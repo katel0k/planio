@@ -18,8 +18,6 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		agenda, _ := r.Context().Value(DB).(Database).GetAgenda(id)
-		userPlans.Structure = agenda
 		marsh, _ := proto.Marshal(userPlans)
 		w.Write(marsh)
 	case "POST":

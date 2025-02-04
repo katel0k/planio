@@ -122,11 +122,18 @@ func (db Database) GetAllPlans(userId int) (*PB.UserPlans, error) {
 		res.Body = append(res.Body, &plan)
 	}
 	res.UserId = int32(userId)
+	ag, err := db.GetAgenda(userId)
+	if err != nil {
+		return nil, err
+	}
+	res.Structure = ag
 	evs, err := db.GetEvents(userId)
 	if err != nil {
 		return nil, err
 	}
-	res.Events = evs
+	res.Calendar = &PB.Calendar{
+		Body: evs,
+	}
 	return &res, nil
 }
 
@@ -208,31 +215,51 @@ func convertPrototypeToAgenda(prototype *agendaNodePrototype) *PB.Agenda {
 }
 
 func (db Database) CreateNewPlan(authorId int, plan *PB.NewPlanRequest) (*PB.Plan, error) {
-	row := db.Pool.QueryRow(context.Background(),
+	ctx := context.TODO()
+	conn, err := db.Pool.Acquire(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	row := conn.QueryRow(ctx,
 		`INSERT INTO plans(author_id, synopsis, parent_id, scale) VALUES ($1, $2, $3, $4)
-		RETURNING id, synopsis, creation_dttm, parent_id, scale`,
+		RETURNING id, creation_dttm`,
 		authorId, plan.Synopsis, plan.Parent, plan.Scale)
 	var res PB.Plan
 	var creationTime time.Time
-	var scale string
-	err := row.Scan(&res.Id, &res.Synopsis, &creationTime, &res.Parent, &scale)
-	res.CreationTime = timestamppb.New(creationTime)
-	res.Scale = PB.TimeScale(PB.TimeScale_value[scale])
+	err = row.Scan(&res.Id, &creationTime)
+
 	if err != nil {
-		log.Default().Print(err)
-		log.Default().Printf("Failed to add message in database")
 		return nil, err
 	}
+
+	if plan.Timeframe != nil {
+		conn.Query(ctx, `UPDATE plans SET start_dttm=$1, end_dttm=$2 WHERE id=$3`,
+			plan.Timeframe.Start, plan.Timeframe.End, res.Id)
+	}
+	if plan.Description != nil && len(*plan.Description) != 0 {
+		conn.Query(ctx, `INSERT INTO descriptions(plan_id, body) VALUES ($1, $2)`,
+			res.Id, plan.Description)
+	}
+
+	res.CreationTime = timestamppb.New(creationTime)
+	res.Description = plan.Description
+	res.Scale = *plan.Scale
+	res.Timeframe = plan.Timeframe
+	res.Parent = plan.Parent
 	return &res, nil
 }
 
 func (db Database) ChangePlan(plan *PB.ChangePlanRequest) error {
-	_, err := db.Pool.Exec(context.Background(), "UPDATE plans SET synopsis=$1 WHERE id=$2", plan.Synopsis, plan.Id)
+	ctx := context.TODO()
+	_, err := db.Pool.Exec(ctx, "UPDATE plans SET synopsis=$1 WHERE id=$2", plan.Synopsis, plan.Id)
 	return err
 }
 
 func (db Database) DeletePlan(plan_id int) error {
-	_, err := db.Pool.Exec(context.Background(), "DELETE FROM plans WHERE id=$1", plan_id)
+	ctx := context.TODO()
+	_, err := db.Pool.Exec(ctx, "DELETE FROM plans WHERE id=$1", plan_id)
 	return err
 }
 
