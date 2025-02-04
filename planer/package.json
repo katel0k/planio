@@ -36,6 +36,7 @@
     "dependencies": {
         "@dr.pogodin/babel-plugin-react-css-modules": "^6.13.3",
         "react": "^19.0.0",
+        "react-datepicker": "^8.0.0",
         "react-dom": "^19.0.0"
     }
 }

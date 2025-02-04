@@ -3,6 +3,8 @@ import "./PlanCreator.module.css"
 import { plan as planPB } from "plan.proto";
 import { upscale } from "App/lib/util";
 import { APIContext } from "App/lib/api";
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker-cssmodules.css";
 
 const TIME_UPDATE_TIMER: number = 60 * 1000;
 
@@ -15,6 +17,7 @@ export default function PlanCreator({ handleSubmit, handleCancel, context }: {
     const [description, setDescription] = useState<string>('');
     const [scale, setScale] = useState<planPB.TimeScale>(upscale(context?.scale ?? planPB.TimeScale.life));
     const [time, setTime] = useState<Date>(new Date());
+    const [startDate, setStartDate] = useState<Date | null>(new Date());
     useEffect(() => {
         const timerId = setTimeout(() => {
             const timeCopy = new Date(time);
@@ -51,6 +54,12 @@ export default function PlanCreator({ handleSubmit, handleCancel, context }: {
                     <option value={planPB.TimeScale.hour}>Hour</option>
                 </select>
             }
+            <div styleName="plan-creator__date">
+                <DatePicker
+                    showIcon
+                    selected={startDate}
+                    onChange={(date: Date | null) => setStartDate(date)} />
+            </div>
             <div styleName="plan-creator__time">
                 Creation time: {time.toLocaleString('ru-ru', {
                     timeStyle: "short",
