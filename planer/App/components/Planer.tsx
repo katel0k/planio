@@ -32,30 +32,30 @@ export default function Planer(): ReactNode {
 
     return (
         <ScaleContext.Provider value={scale}>
-            <div styleName="planer">
-                <PlanCreatorButton />
-                <div styleName="planer__controls">
-                    <span>Scale: {convertScaleToString(scale)}</span>
-                    <div>
-                        <input type="button" name="planer__controls-zoom-in" value="in" onClick={_ => 
-                            setScale(upscale(scale))
-                        }/>
-                        <input type="button" name="planer__controls-zoom-out" value="out" onClick={_ => 
-                            setScale(downscale(scale))
-                        }/>
+            <APIContext.Provider value={api}>
+                <div styleName="planer">
+                    <PlanCreatorButton />
+                    <div styleName="planer__controls">
+                        <span>Scale: {convertScaleToString(scale)}</span>
+                        <div>
+                            <input type="button" name="planer__controls-zoom-in" value="in" onClick={_ => 
+                                setScale(upscale(scale))
+                            }/>
+                            <input type="button" name="planer__controls-zoom-out" value="out" onClick={_ => 
+                                setScale(downscale(scale))
+                            }/>
+                        </div>
                     </div>
-                </div>
-                <div styleName="planer__plans">
-                    <APIContext.Provider value={api}>
+                    <div styleName="planer__plans">
                         <ScaleTree converter={id => 
                             <Plan
-                                handleChange={_=>{}}
-                                handleDelete={_=>{}}
+                                handleChange={api?.changePlan}
+                                handleDelete={api?.deletePlan}
                                 plan={plans.get(id) as planPB.Plan}/>}
                             tree={agenda}/>
-                    </APIContext.Provider>
+                    </div>
                 </div>
-            </div>
+            </APIContext.Provider>
         </ScaleContext.Provider>
     )
 }

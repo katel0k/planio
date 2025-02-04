@@ -4,6 +4,8 @@ import { plan as planPB } from "plan.proto";
 import { upscale } from "App/lib/util";
 import { APIContext } from "App/lib/api";
 
+const TIME_UPDATE_TIMER: number = 60 * 1000;
+
 export default function PlanCreator({ handleSubmit, handleCancel, context }: {
     context?: planPB.Plan,
     handleSubmit: (request: planPB.NewPlanRequest) => void,
@@ -18,7 +20,7 @@ export default function PlanCreator({ handleSubmit, handleCancel, context }: {
             const timeCopy = new Date(time);
             timeCopy.setMinutes(time.getMinutes() + 1);
             setTime(timeCopy);
-        }, 60 * 1000);
+        }, TIME_UPDATE_TIMER);
         return () => {
             clearTimeout(timerId);
         }
@@ -27,7 +29,8 @@ export default function PlanCreator({ handleSubmit, handleCancel, context }: {
         handleSubmit(planPB.NewPlanRequest.create({
             synopsis,
             description,
-            scale
+            scale,
+            parent: context?.id
         }));
     }
     return (
@@ -36,15 +39,18 @@ export default function PlanCreator({ handleSubmit, handleCancel, context }: {
                     onChange={e => setSynopsis(e.target.value)} value={synopsis} />
             <input styleName="plan-creator__description" type="text" name="description"
                     onChange={e => setDescription(e.target.value)} value={description} />
-            <select styleName="plan-creator__scale" name="scale" value={scale}
-                    onChange={e => setScale(Number(e.target.value) as planPB.TimeScale)}>
-                <option value={planPB.TimeScale.life}>Life</option>
-                <option value={planPB.TimeScale.year}>Year</option>
-                <option value={planPB.TimeScale.month}>Month</option>
-                <option value={planPB.TimeScale.week}>Week</option>
-                <option value={planPB.TimeScale.day}>Day</option>
-                <option value={planPB.TimeScale.hour}>Hour</option>
-            </select>
+            {
+                context != undefined &&
+                <select styleName="plan-creator__scale" name="scale" value={scale}
+                        onChange={e => setScale(Number(e.target.value) as planPB.TimeScale)}>
+                    <option value={planPB.TimeScale.life}>Life</option>
+                    <option value={planPB.TimeScale.year}>Year</option>
+                    <option value={planPB.TimeScale.month}>Month</option>
+                    <option value={planPB.TimeScale.week}>Week</option>
+                    <option value={planPB.TimeScale.day}>Day</option>
+                    <option value={planPB.TimeScale.hour}>Hour</option>
+                </select>
+            }
             <div styleName="plan-creator__time">
                 Creation time: {time.toLocaleString('ru-ru', {
                     timeStyle: "short",
@@ -59,7 +65,7 @@ export default function PlanCreator({ handleSubmit, handleCancel, context }: {
     )
 }
 
-export function PlanCreatorButton(): ReactNode {
+export function PlanCreatorButton({ context }: { context?: planPB.Plan }): ReactNode {
     const [isPlanCreating, setIsPlanCreating] = useState<boolean>(false);
     const api = useContext(APIContext);
     return (
@@ -67,7 +73,7 @@ export function PlanCreatorButton(): ReactNode {
             <PlanCreator handleSubmit={(request: planPB.NewPlanRequest) => {
                 api?.createPlan(request);
                 setIsPlanCreating(false);
-            }} handleCancel={() => setIsPlanCreating(false)} /> :
-            <input type="button" onClick={_ => setIsPlanCreating(true)} value="Create new plan" />
+            }} handleCancel={() => setIsPlanCreating(false)} context={context} /> :
+            <input type="button" onClick={_ => setIsPlanCreating(true)} value="Plan" />
     )
 }

@@ -6,7 +6,6 @@
         "allowUnreachableCode": false,
         "allowUnusedLabels": false,
         "allowSyntheticDefaultImports": true,
-        "exactOptionalPropertyTypes": true,
         "noFallthroughCasesInSwitch": true,
         "noImplicitThis": true,
         "noPropertyAccessFromIndexSignature": true,
