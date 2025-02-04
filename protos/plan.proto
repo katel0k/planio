@@ -6,6 +6,7 @@ option go_package = "github.com/katel0k/planio/server/build/plan";
 
 package plan;
 import "event.proto";
+import "timeframe.proto";
 
 message NewPlanRequest {
     string synopsis = 1;
@@ -46,6 +47,7 @@ message Plan {
     optional google.protobuf.Timestamp creation_time = 4;
     optional int32 parent = 5;
     TimeScale scale = 6;
+    optional timeframe.Timeframe timeframe = 7;
 }
 
 message UserPlans {
