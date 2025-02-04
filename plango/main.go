@@ -16,7 +16,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
-	PB "github.com/katel0k/planio/server/protos"
+	PB "github.com/katel0k/planio/protos"
 )
 
 type contextKey int

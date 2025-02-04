@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	PB "github.com/katel0k/planio/server/protos"
+	PB "github.com/katel0k/planio/protos"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

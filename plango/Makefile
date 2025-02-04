@@ -1,13 +1,13 @@
-.PHONY: all server mock_client
+.PHONY: all server clean
 
-all: server mock_client
+all: server
 
 protos=../protos/*.proto
 
 server:
-	protoc -I=../protos --go_out=./server $(protos) --experimental_allow_proto3_optional
-	go build -C server -o ./build/
+	protoc -I=../protos --go_out=./ $(protos) --experimental_allow_proto3_optional
+	go build -o ./app
 
-mock_client:
-	protoc -I=../protos --go_out=./mock_client/build $(protos) --experimental_allow_proto3_optional
-	go build -C mock_client -o ./build/
+clean:
+	rm app
+	rm -rf protos/

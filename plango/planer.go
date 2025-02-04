@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	PB "github.com/katel0k/planio/server/protos"
+	PB "github.com/katel0k/planio/protos"
 	"google.golang.org/protobuf/proto"
 )
 
