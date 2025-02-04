@@ -11,3 +11,11 @@ export function convertScaleToString(scale: planPB.TimeScale): string {
         case planPB.TimeScale.unknown: return 'unknown';
     }
 }
+
+export function upscale(scale: planPB.TimeScale): planPB.TimeScale {
+    return scale == planPB.TimeScale.hour ? scale : scale + 1;
+}
+
+export function downscale(scale: planPB.TimeScale): planPB.TimeScale {
+    return scale == planPB.TimeScale.life ? scale : scale - 1;
+}

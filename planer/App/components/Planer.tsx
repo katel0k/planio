@@ -1,10 +1,11 @@
 import { ReactNode, useState, useEffect, useContext, createContext } from 'react';
+// import { event as eventPB } from 'event.proto'
 import { plan as planPB } from 'plan.proto'
 import { APIContext, apiFactory, IdContext } from 'App/lib/api';
 import './Planer.module.css'
 import Plan from './Plan'
-import PlanCreator from './PlanCreator'
-import { convertScaleToString } from 'App/lib/util'
+import { PlanCreatorButton } from './PlanCreator'
+import { convertScaleToString, downscale, upscale } from 'App/lib/util'
 import { ScaleTree } from './Agenda';
 
 export const ScaleContext = createContext<planPB.TimeScale>(planPB.TimeScale.life);
@@ -15,7 +16,7 @@ export default function Planer(): ReactNode {
     const { getPlans } = api;
     const [agenda, setAgenda] = useState<planPB.Agenda[]>([]);
     const [plans, setPlans] = useState<Map<number, planPB.Plan>>(new Map());
-    const [isPlanCreating, setIsPlanCreating] = useState<boolean>(false);
+    // const [events, setEvents] = useState<eventPB.Event[]>([]);
     const [scale, setScale] = useState<planPB.TimeScale>(planPB.TimeScale.life);
     useEffect(() => {
         const controller = new AbortController()
@@ -23,52 +24,24 @@ export default function Planer(): ReactNode {
             .then((res: planPB.UserPlans) => {
                 setAgenda(res.structure ? res.structure.subplans : []);
                 setPlans(new Map(res.body.map(a => new planPB.Plan(a)).map((a: planPB.Plan) => [a.id, a])));
+                // setEvents(res.events);
             })
             .catch(_ => {});
-        return () => { controller.abort("Use effect cancelled") }
-    }, []);
-
-    // const handleCreatePlan: (plan: planPB.NewPlanRequest) => void = (plan) => {
-    //     createPlan(plan)
-    //         .then((res: planPB.Plan) => setAgenda([...agenda, convertIPlanToPlan(res)]))
-    //         .catch(_ => {});
-    // }
-
-    // const handleChangePlan: (change: planPB.ChangePlanRequest) => void = (change) => {
-    //     changePlan(change)
-    //         .then((res: planPB.Plan) => setAgenda(
-    //             agenda.map((a: agendaTree) => a.id == res.id ? convertIPlanToPlan(res) : a)
-    //         ))
-    //         .catch(_ => {});
-    // }
-
-    // const handleDeletePlan: (del: planPB.DeletePlanRequest) => void = (del) => {
-    //     deletePlan(del)
-    //         .then((res: planPB.Plan) => setAgenda(
-    //             agenda.filter((a: planPB.Plan) => a.id != res.id)
-    //         ))
-    //         .catch(_ => agenda);
-    // }
+            return () => { controller.abort("Use effect cancelled") }
+        }, []);
 
     return (
         <ScaleContext.Provider value={scale}>
             <div styleName="planer">
-                {
-                    isPlanCreating ?
-                        <PlanCreator handleSubmit={(_: planPB.NewPlanRequest) => {
-                            // handleCreatePlan(request);
-                            setIsPlanCreating(false);
-                        }} handleCancel={() => setIsPlanCreating(false)} /> :
-                        <input type="button" onClick={_ => setIsPlanCreating(true)} value="Create new plan" />
-                    }
+                <PlanCreatorButton />
                 <div styleName="planer__controls">
                     <span>Scale: {convertScaleToString(scale)}</span>
                     <div>
                         <input type="button" name="planer__controls-zoom-in" value="in" onClick={_ => 
-                            setScale(scale == planPB.TimeScale.hour ? scale : scale + 1)
+                            setScale(upscale(scale))
                         }/>
                         <input type="button" name="planer__controls-zoom-out" value="out" onClick={_ => 
-                            setScale(scale == planPB.TimeScale.life ? scale : scale - 1)
+                            setScale(downscale(scale))
                         }/>
                     </div>
                 </div>
