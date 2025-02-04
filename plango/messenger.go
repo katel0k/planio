@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -101,4 +103,29 @@ func onlineUsersHandler(w http.ResponseWriter, r *http.Request) {
 	onlineUsers.RUnlock()
 	marsh, _ := proto.Marshal(&resp)
 	w.Write(marsh)
+}
+
+func (db Database) CreateNewMessage(authorId int, receiverId int, text string) (int, error) {
+	row := db.Pool.QueryRow(context.Background(),
+		"INSERT INTO messages(author_id, receiver_id, body) VALUES ($1, $2, $3) RETURNING id", authorId, receiverId, text)
+	var id int
+	err := row.Scan(&id)
+	if err != nil {
+		log.Default().Print(err)
+		log.Default().Printf("Failed to add message in database")
+		return 0, err
+	}
+	return id, nil
+}
+
+func (db Database) GetAllMessages(req *PB.AllMessagesRequest) (*PB.AllMessagesResponse, error) {
+	rows, err := db.Pool.Query(context.Background(),
+		"SELECT id, author_id, text FROM messages WHERE author_id=$1 AND receiver_id=$2", req.SenderId, req.ReceiverId)
+	var resp PB.AllMessagesResponse
+	for rows.Next() {
+		var msg PB.MsgResponse
+		rows.Scan(&msg.Id, &msg.AuthorId, &msg.Text)
+		resp.Messages = append(resp.Messages, &msg)
+	}
+	return &resp, err
 }

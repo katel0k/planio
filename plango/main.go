@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -15,8 +14,6 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-
-	PB "github.com/katel0k/planio/protos"
 )
 
 type contextKey int
@@ -65,52 +62,6 @@ func getRequest(r *http.Request, m proto.Message) error {
 	return err
 }
 
-func authHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	var authReq PB.AuthRequest
-	if getRequest(r, &authReq) != nil {
-		return
-	}
-
-	id, err := r.Context().Value(DB).(Database).FindUser(authReq.Username)
-	var success bool
-
-	if err != nil {
-		success = false
-		if errors.Is(err, ErrNotFound) {
-			id, err = r.Context().Value(DB).(Database).CreateNewUser(authReq.Username)
-			if err != nil {
-				return
-			}
-		} else {
-			return
-		}
-	} else {
-		success = true
-	}
-
-	if r.Context().Value(USE_COOKIES).(bool) {
-		cookie := http.Cookie{
-			Name:   "id",
-			Value:  strconv.Itoa(id),
-			MaxAge: 300,
-		}
-		http.SetCookie(w, &cookie)
-	}
-	response := PB.AuthResponse{Successful: success}
-	if success {
-		response.Response = &PB.AuthResponse_Id{
-			Id: int32(id),
-		}
-	} else {
-		response.Response = &PB.AuthResponse_Reason{
-			Reason: "Incorrect username",
-		}
-	}
-	marsh, _ := proto.Marshal(&response)
-	w.Write(marsh)
-}
-
 func cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -136,7 +87,7 @@ func main() {
 	serverPort := flag.Int("p", DEFAULT_SERVER_PORT, "Server port")
 	flag.Parse()
 	db := Database{
-		Pool: ConnectDB(*databasePort),
+		Pool: InitDB(*databasePort),
 	}
 	defer db.Pool.Close()
 
