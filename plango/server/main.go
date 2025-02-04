@@ -16,7 +16,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
-	authPB "github.com/katel0k/planio/server/build/auth"
+	PB "github.com/katel0k/planio/server/protos"
 )
 
 type contextKey int
@@ -67,7 +67,7 @@ func getRequest(r *http.Request, m proto.Message) error {
 
 func authHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	var authReq authPB.AuthRequest
+	var authReq PB.AuthRequest
 	if getRequest(r, &authReq) != nil {
 		return
 	}
@@ -97,13 +97,13 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		http.SetCookie(w, &cookie)
 	}
-	response := authPB.AuthResponse{Successful: success}
+	response := PB.AuthResponse{Successful: success}
 	if success {
-		response.Response = &authPB.AuthResponse_Id{
+		response.Response = &PB.AuthResponse_Id{
 			Id: int32(id),
 		}
 	} else {
-		response.Response = &authPB.AuthResponse_Reason{
+		response.Response = &PB.AuthResponse_Reason{
 			Reason: "Incorrect username",
 		}
 	}

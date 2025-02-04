@@ -5,13 +5,13 @@ import (
 	"sync"
 	"time"
 
-	joinPB "github.com/katel0k/planio/server/build/join"
-	msgPB "github.com/katel0k/planio/server/build/msg"
+	// PB "github.com/katel0k/planio/server/build/join"
+	PB "github.com/katel0k/planio/server/protos"
 	"google.golang.org/protobuf/proto"
 )
 
 type userOnline struct {
-	msgChan chan *msgPB.MsgResponse
+	msgChan chan *PB.MsgResponse
 }
 
 type onlineUsers struct {
@@ -19,19 +19,19 @@ type onlineUsers struct {
 	body map[int]userOnline
 }
 
-func (user *userOnline) sendMessage(msg *msgPB.MsgResponse) {
+func (user *userOnline) sendMessage(msg *PB.MsgResponse) {
 	user.msgChan <- msg
 }
 
 func (users *onlineUsers) addUser(id int) {
 	users.Lock()
-	users.body[id] = userOnline{msgChan: make(chan *msgPB.MsgResponse)}
+	users.body[id] = userOnline{msgChan: make(chan *PB.MsgResponse)}
 	users.Unlock()
 }
 
 func joinHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	var joinReq joinPB.JoinRequest // TODO: take that from cookie instead
+	var joinReq PB.JoinRequest // TODO: take that from cookie instead
 	if getRequest(r, &joinReq) != nil {
 		return
 	}
@@ -44,7 +44,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	var msg msgPB.MsgRequest
+	var msg PB.MsgRequest
 	if getRequest(r, &msg) != nil {
 		return
 	}
@@ -55,7 +55,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	response := msgPB.MsgResponse{
+	response := PB.MsgResponse{
 		Id:       int32(msgId),
 		Text:     msg.Text,
 		AuthorId: int32(id),
@@ -70,7 +70,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 
 func messagesHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	var msg msgPB.AllMessagesRequest
+	var msg PB.AllMessagesRequest
 	if getRequest(r, &msg) != nil {
 		return
 	}
@@ -93,9 +93,9 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 func onlineUsersHandler(w http.ResponseWriter, r *http.Request) {
 	onlineUsers, _ := r.Context().Value(ONLINE_USERS).(*onlineUsers)
 	onlineUsers.RLock()
-	var resp joinPB.JoinedUsersResponse
+	var resp PB.JoinedUsersResponse
 	for userId := range onlineUsers.body {
-		resp.Users = append(resp.Users, &joinPB.User{
+		resp.Users = append(resp.Users, &PB.User{
 			Id: int32(userId),
 		})
 	}

@@ -5,7 +5,7 @@ all: server mock_client
 protos=../protos/*.proto
 
 server:
-	protoc -I=../protos --go_out=./server/build $(protos) --experimental_allow_proto3_optional
+	protoc -I=../protos --go_out=./server $(protos) --experimental_allow_proto3_optional
 	go build -C server -o ./build/
 
 mock_client:

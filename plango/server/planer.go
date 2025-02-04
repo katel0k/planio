@@ -4,8 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	eventPB "github.com/katel0k/planio/server/build/event"
-	planPB "github.com/katel0k/planio/server/build/plan"
+	PB "github.com/katel0k/planio/server/protos"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -21,7 +20,7 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		defer r.Body.Close()
 		id, _ := getId(r)
-		var planReq planPB.NewPlanRequest
+		var planReq PB.NewPlanRequest
 		if err := getRequest(r, &planReq); err != nil {
 			log.Default().Print(err)
 			return
@@ -31,7 +30,7 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(marsh)
 	case "PATCH":
 		defer r.Body.Close()
-		var planReq planPB.ChangePlanRequest
+		var planReq PB.ChangePlanRequest
 		if getRequest(r, &planReq) != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -44,7 +43,7 @@ func planHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	case "DELETE":
 		defer r.Body.Close()
-		var planReq planPB.DeletePlanRequest
+		var planReq PB.DeletePlanRequest
 		if getRequest(r, &planReq) != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -65,8 +64,8 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		id, _ := getId(r)
 		events, _ := r.Context().Value(DB).(Database).GetEvents(id)
-		calendar := eventPB.Calendar{
-			Body: make([]*eventPB.Event, 0),
+		calendar := PB.Calendar{
+			Body: make([]*PB.Event, 0),
 		}
 		calendar.Body = append(calendar.Body, events...)
 		marsh, _ := proto.Marshal(&calendar)
@@ -74,7 +73,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		defer r.Body.Close()
 		id, _ := getId(r)
-		var eventReq eventPB.NewEventRequest
+		var eventReq PB.NewEventRequest
 		if err := getRequest(r, &eventReq); err != nil {
 			log.Default().Print(err)
 			return

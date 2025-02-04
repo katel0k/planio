@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package msg;
 
-option go_package = "github.com/katel0k/planio/server/build/msg";
+option go_package = "protos/";
 
 message MsgRequest {
     int32 receiver_id = 1;

@@ -9,9 +9,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	eventPB "github.com/katel0k/planio/server/build/event"
-	msgPB "github.com/katel0k/planio/server/build/msg"
-	planPB "github.com/katel0k/planio/server/build/plan"
+
+	PB "github.com/katel0k/planio/server/protos"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -82,35 +81,42 @@ func (db Database) CreateNewMessage(authorId int, receiverId int, text string) (
 	return id, nil
 }
 
-func (db Database) GetAllMessages(req *msgPB.AllMessagesRequest) (*msgPB.AllMessagesResponse, error) {
+func (db Database) GetAllMessages(req *PB.AllMessagesRequest) (*PB.AllMessagesResponse, error) {
 	rows, err := db.Pool.Query(context.Background(),
 		"SELECT id, author_id, text FROM messages WHERE author_id=$1 AND receiver_id=$2", req.SenderId, req.ReceiverId)
-	var resp msgPB.AllMessagesResponse
+	var resp PB.AllMessagesResponse
 	for rows.Next() {
-		var msg msgPB.MsgResponse
+		var msg PB.MsgResponse
 		rows.Scan(&msg.Id, &msg.AuthorId, &msg.Text)
 		resp.Messages = append(resp.Messages, &msg)
 	}
 	return &resp, err
 }
 
-func (db Database) GetAllPlans(userId int) (*planPB.UserPlans, error) {
+func (db Database) GetAllPlans(userId int) (*PB.UserPlans, error) {
 	rows, err := db.Pool.Query(context.Background(),
-		`SELECT id, synopsis, creation_dttm, parent_id, scale, body as description
-		FROM plans FULL OUTER JOIN descriptions ON id=plan_id
+		`SELECT id, synopsis, creation_dttm, parent_id, scale, body as description, start as start_dttm, end as end_dttm
+		FROM plans FULL OUTER JOIN descriptions d ON id=d.plan_id
+					FULL OUTER JOIN timeframes t ON id=t.plan_id
 		WHERE author_id=$1`, userId)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var res planPB.UserPlans
+	var res PB.UserPlans
 	for rows.Next() {
-		var plan planPB.Plan
+		var plan PB.Plan
 		var scale string
 		var creationTime time.Time
-		rows.Scan(&plan.Id, &plan.Synopsis, &creationTime, &plan.Parent, &scale, &plan.Description)
+		var startTime time.Time
+		var endTime time.Time
+		rows.Scan(&plan.Id, &plan.Synopsis, &creationTime, &plan.Parent, &scale, &plan.Description, &startTime, &endTime)
 		plan.CreationTime = timestamppb.New(creationTime)
-		plan.Scale = planPB.TimeScale(planPB.TimeScale_value[scale])
+		plan.Timeframe = &PB.Timeframe{
+			Start: timestamppb.New(startTime),
+			End:   timestamppb.New(endTime),
+		}
+		plan.Scale = PB.TimeScale(PB.TimeScale_value[scale])
 		res.Body = append(res.Body, &plan)
 	}
 	res.UserId = int32(userId)
@@ -123,12 +129,12 @@ func (db Database) GetAllPlans(userId int) (*planPB.UserPlans, error) {
 }
 
 type agendaNodePrototype struct {
-	body     *planPB.Agenda_AgendaNode
+	body     *PB.Agenda_AgendaNode
 	parent   *int32
 	subplans []*agendaNodePrototype
 }
 
-func (db Database) GetAgenda(userId int) (*planPB.Agenda, error) {
+func (db Database) GetAgenda(userId int) (*PB.Agenda, error) {
 	rows, err := db.Pool.Query(context.Background(),
 		`SELECT id, parent_id, scale FROM plans WHERE author_id=$1`, userId)
 	if err != nil {
@@ -138,16 +144,16 @@ func (db Database) GetAgenda(userId int) (*planPB.Agenda, error) {
 	prototype := make([]*agendaNodePrototype, 0)
 	for rows.Next() {
 		node := agendaNodePrototype{
-			body:   &planPB.Agenda_AgendaNode{},
+			body:   &PB.Agenda_AgendaNode{},
 			parent: nil,
 		}
 		var scale string
 		rows.Scan(&node.body.Id, &node.parent, &scale)
-		node.body.Scale = planPB.TimeScale(planPB.TimeScale_value[scale])
+		node.body.Scale = PB.TimeScale(PB.TimeScale_value[scale])
 		prototype = append(prototype, &node)
 	}
 	prototype = getScaleTreePrototype(prototype)
-	res := planPB.Agenda{
+	res := PB.Agenda{
 		Body: nil, // root
 	}
 	for i := range prototype {
@@ -188,28 +194,28 @@ func getScaleTreePrototype(plans []*agendaNodePrototype) []*agendaNodePrototype 
 	return res
 }
 
-func convertPrototypeToAgenda(prototype *agendaNodePrototype) *planPB.Agenda {
-	subplans := make([]*planPB.Agenda, 0)
+func convertPrototypeToAgenda(prototype *agendaNodePrototype) *PB.Agenda {
+	subplans := make([]*PB.Agenda, 0)
 	for i := range prototype.subplans {
 		subplans = append(subplans, convertPrototypeToAgenda(prototype.subplans[i]))
 	}
-	return &planPB.Agenda{
+	return &PB.Agenda{
 		Body:     prototype.body,
 		Subplans: subplans,
 	}
 }
 
-func (db Database) CreateNewPlan(authorId int, plan *planPB.NewPlanRequest) (*planPB.Plan, error) {
+func (db Database) CreateNewPlan(authorId int, plan *PB.NewPlanRequest) (*PB.Plan, error) {
 	row := db.Pool.QueryRow(context.Background(),
 		`INSERT INTO plans(author_id, synopsis, parent_id, scale) VALUES ($1, $2, $3, $4)
 		RETURNING id, synopsis, creation_dttm, parent_id, scale`,
 		authorId, plan.Synopsis, plan.Parent, plan.Scale)
-	var res planPB.Plan
+	var res PB.Plan
 	var creationTime time.Time
 	var scale string
 	err := row.Scan(&res.Id, &res.Synopsis, &creationTime, &res.Parent, &scale)
 	res.CreationTime = timestamppb.New(creationTime)
-	res.Scale = planPB.TimeScale(planPB.TimeScale_value[scale])
+	res.Scale = PB.TimeScale(PB.TimeScale_value[scale])
 	if err != nil {
 		log.Default().Print(err)
 		log.Default().Printf("Failed to add message in database")
@@ -218,7 +224,7 @@ func (db Database) CreateNewPlan(authorId int, plan *planPB.NewPlanRequest) (*pl
 	return &res, nil
 }
 
-func (db Database) ChangePlan(plan *planPB.ChangePlanRequest) error {
+func (db Database) ChangePlan(plan *PB.ChangePlanRequest) error {
 	_, err := db.Pool.Exec(context.Background(), "UPDATE plans SET synopsis=$1 WHERE id=$2", plan.Synopsis, plan.Id)
 	return err
 }
@@ -228,16 +234,16 @@ func (db Database) DeletePlan(plan_id int) error {
 	return err
 }
 
-func (db Database) GetEvents(authorId int) ([]*eventPB.Event, error) {
+func (db Database) GetEvents(authorId int) ([]*PB.Event, error) {
 	rows, err := db.Pool.Query(context.Background(),
 		`SELECT id, synopsis, creation_dttm, dttm FROM events WHERE author_id=$1`, authorId)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	events := make([]*eventPB.Event, 0)
+	events := make([]*PB.Event, 0)
 	for rows.Next() {
-		var event eventPB.Event
+		var event PB.Event
 		var creationTime time.Time
 		var dttm time.Time
 		rows.Scan(&event.Id, &event.Synopsis, &creationTime, &dttm)
@@ -248,11 +254,11 @@ func (db Database) GetEvents(authorId int) ([]*eventPB.Event, error) {
 	return events, nil
 }
 
-func (db Database) CreateEvent(authorId int, newEvent *eventPB.NewEventRequest) (*eventPB.Event, error) {
+func (db Database) CreateEvent(authorId int, newEvent *PB.NewEventRequest) (*PB.Event, error) {
 	row := db.Pool.QueryRow(context.Background(),
 		`INSERT INTO events(author_id, synopsis, dttm) VALUE ($1, $2, $3) RETURNING id, synopsis, creation_dttm, dttm`,
 		authorId, newEvent.Synopsis, newEvent.Time)
-	var res eventPB.Event
+	var res PB.Event
 	var creationTime time.Time
 	var dttm time.Time
 	err := row.Scan(&res.Id, &res.Synopsis, &creationTime, &dttm)
