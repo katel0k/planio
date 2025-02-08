@@ -1,5 +1,6 @@
 import { createContext } from "react"
 import { plan as planPB } from 'plan.proto'
+import { auth as authPB } from 'auth.proto'
 
 export const NAME_COOKIE_KEY: string = 'name';
 export const ID_UNSET: number = -1;
@@ -11,6 +12,18 @@ export function getNameCookie(): number {
 }
 
 export const IdContext: React.Context<number> = createContext(ID_UNSET);
+
+export async function handleAuth(req: authPB.AuthRequest): Promise<authPB.AuthResponse> {
+    const response: Response = await fetch(new URL("/auth", serverUrl), {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify(req.toJSON()),
+        })
+    const buf: ArrayBuffer = await response.arrayBuffer();
+    return authPB.AuthResponse.decode(new Uint8Array(buf));
+}
 
 export interface fetchFunc {
     (URL: string | URL, options?: RequestInit): Promise<Response>

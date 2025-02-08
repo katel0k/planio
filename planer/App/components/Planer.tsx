@@ -1,7 +1,6 @@
-import { ReactNode, useState, useEffect, useContext, createContext } from 'react';
-// import { event as eventPB } from 'event.proto'
+import { ReactNode, useState, useEffect, createContext } from 'react';
 import { plan as planPB } from 'plan.proto'
-import { APIContext, apiFactory, IdContext } from 'App/lib/api';
+import { API, APIContext } from 'App/lib/api';
 import './Planer.module.css'
 import Plan from './Plan'
 import { PlanCreatorButton } from './PlanCreator'
@@ -10,21 +9,22 @@ import { ScaleTree } from './Agenda';
 
 export const ScaleContext = createContext<planPB.TimeScale>(planPB.TimeScale.life);
 
-export default function Planer(): ReactNode {
-    const id = useContext<number>(IdContext);
-    const api = apiFactory(id);
-    const { getPlans } = api;
+export default function Planer({api}: {api: API}): ReactNode {
     const [agenda, setAgenda] = useState<planPB.Agenda[]>([]);
-    const [plans, setPlans] = useState<Map<number, planPB.Plan>>(new Map());
-    // const [events, setEvents] = useState<eventPB.Event[]>([]);
+    type plansType = {
+        [id: number]: planPB.Plan
+    }
+    const [plans, setPlans] = useState<plansType>({});
     const [scale, setScale] = useState<planPB.TimeScale>(planPB.TimeScale.life);
     useEffect(() => {
         const controller = new AbortController()
-        getPlans({ signal: controller.signal })
+        api.getPlans({ signal: controller.signal })
             .then((res: planPB.UserPlans) => {
                 setAgenda(res.structure ? res.structure.subplans : []);
-                setPlans(new Map(res.body.map(a => new planPB.Plan(a)).map((a: planPB.Plan) => [a.id, a])));
-                // setEvents(res.events);
+                setPlans(res.body.map(a => new planPB.Plan(a)).reduce((res: plansType, a: planPB.Plan) => ({
+                    ...res,
+                    [a.id]: a
+                }), {}));
             })
             .catch(_ => {});
             return () => { controller.abort("Use effect cancelled") }
@@ -47,11 +47,12 @@ export default function Planer(): ReactNode {
                         </div>
                     </div>
                     <div styleName="planer__plans">
-                        <ScaleTree converter={id => plans.has(id) ?
+                        <ScaleTree converter={id => id in plans ?
                             <Plan
-                                handleChange={api?.changePlan}
-                                handleDelete={api?.deletePlan}
-                                plan={plans.get(id) as planPB.Plan}/> : null}
+                                handleChange={api.changePlan}
+                                handleDelete={api.deletePlan}
+                                plan={plans[id] as planPB.Plan}
+                                key={id}/> : null}
                             tree={agenda}/>
                     </div>
                 </div>
