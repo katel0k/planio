@@ -1,17 +1,17 @@
 import { ReactNode, useContext, useEffect, useState } from "react";
-import "./PlanCreator.module.css"
 import { plan as planPB } from "plan.proto";
 import { timeframe as timeframePB, google } from "timeframe.proto";
-import { upscale } from "App/lib/util";
+import { PlanObject, upscale } from "App/lib/util";
 import { APIContext } from "App/lib/api";
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker-cssmodules.css";
+import "./PlanCreator.module.css"
 
 const TIME_UPDATE_TIMER: number = 60 * 1000;
 const MISTAKE_VANISHING_TIMEOUT: number = 3 * 1000;
 
 export default function PlanCreator({ handleSubmit, handleCancel, context }: {
-    context?: planPB.Plan,
+    context?: PlanObject,
     handleSubmit: (request: planPB.NewPlanRequest) => void,
     handleCancel: () => void
 }): ReactNode {
@@ -107,7 +107,7 @@ export default function PlanCreator({ handleSubmit, handleCancel, context }: {
     )
 }
 
-export function PlanCreatorButton({ context }: { context?: planPB.Plan }): ReactNode {
+export function PlanCreatorButton({ context }: { context?: PlanObject }): ReactNode {
     const [isPlanCreating, setIsPlanCreating] = useState<boolean>(false);
     const api = useContext(APIContext);
     return (

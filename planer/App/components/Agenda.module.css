@@ -1,9 +1,9 @@
-.agenda {
-    padding: 10px;
-}
-
-.agenda_parented {
+.scale-tree_parented {
     border-radius: 0.2em;
     padding: 10px;
     border: 2px solid silver;
+}
+
+.scale-tree__subplans {
+    padding-left: 30px;
 }

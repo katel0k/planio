@@ -1,17 +1,16 @@
 import { ReactNode, useContext, useState } from 'react';
 import { plan as planPB } from 'plan.proto'
-import "./Plan.module.css"
 import debugContext from 'App/lib/debugContext';
-import { convertScaleToString } from 'App/lib/util';
-import { PlanCreatorButton } from './PlanCreator';
+import { convertScaleToString, PlanObject } from 'App/lib/util';
+import "./Plan.module.css"
 
 export interface PlanProps {
-    plan: planPB.Plan,
-    handleDelete: (plan: planPB.DeletePlanRequest) => void,
-    handleChange: (plan: planPB.ChangePlanRequest) => void
+    plan: PlanObject
 }
 
-export default function Plan({ plan, handleChange, handleDelete }: PlanProps): ReactNode {
+export default function Plan({ plan }: PlanProps): ReactNode {
+    let handleChange = (_: planPB.ChangePlanRequest) => {};
+    let handleDelete = (_: planPB.DeletePlanRequest) => {};
     const [synopsis, setSynopsis] = useState<string>(plan.synopsis);
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const debug = useContext(debugContext);
@@ -46,9 +45,6 @@ export default function Plan({ plan, handleChange, handleDelete }: PlanProps): R
                     <input type="button" styleName="plan__settings-delete" onClick={_ => 
                         handleDelete(planPB.DeletePlanRequest.create({id: plan.id}))} value="delete" />
                 </div>
-            </div>
-            <div styleName="plan__subplans">
-                <PlanCreatorButton context={plan}/>
             </div>
         </div>
     )
